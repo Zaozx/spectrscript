@@ -92,7 +92,7 @@ local function CreateESPForCharacter(character, player)
    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
    highlight.FillTransparency = 0.4
    highlight.OutlineTransparency = 0
-   highlight.DepthMode = Enum.HighlightDepthMode.Occluded
+   highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
    highlight.Adornee = character
    highlight.Parent = character
    Highlights[character] = highlight
