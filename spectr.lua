@@ -13,7 +13,7 @@ end
 -------------------------------------------------------------------------------
 print(ProtectionConfig.HubName .. " Loaded Successfully!")
 
--- // Spectr - UI Matching Your Screenshot (Tabbed + Big Logo) \\ --
+-- // Spectr - Dark Modern UI (UI Fixed + Head Visibility) \\ --
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
@@ -28,6 +28,7 @@ local SpawnExclusionDistance = 60
 local Highlights = {}
 local NameLabels = {}
 local ESPEnabled = false
+local PlayerCountText = nil
 
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Thickness = 2
@@ -141,6 +142,22 @@ end
 local function ToggleESP(state)
    ESPEnabled = state
    if state then
+      if not PlayerCountText then
+         local sg = Instance.new("ScreenGui")
+         sg.ResetOnSpawn = false
+         sg.Parent = LocalPlayer:WaitForChild("PlayerGui")
+         PlayerCountText = Instance.new("TextLabel")
+         PlayerCountText.Size = UDim2.new(0, 280, 0, 40)
+         PlayerCountText.Position = UDim2.new(0.5, -140, 0, 15)
+         PlayerCountText.BackgroundTransparency = 0.6
+         PlayerCountText.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+         PlayerCountText.TextColor3 = Color3.fromRGB(255, 255, 255)
+         PlayerCountText.TextStrokeTransparency = 0
+         PlayerCountText.Font = Enum.Font.GothamBold
+         PlayerCountText.TextSize = 16
+         PlayerCountText.Text = "Players in ESP: 0"
+         PlayerCountText.Parent = sg
+      end
       RunService:BindToRenderStep("SpectrESP", Enum.RenderPriority.Camera.Value + 5, UpdateESP)
    else
       RunService:UnbindFromRenderStep("SpectrESP")
@@ -148,6 +165,7 @@ local function ToggleESP(state)
       for _, lbl in pairs(NameLabels) do if lbl then lbl:Destroy() end end
       Highlights = {}
       NameLabels = {}
+      if PlayerCountText then PlayerCountText.Parent:Destroy() PlayerCountText = nil end
    end
 end
 
@@ -211,182 +229,118 @@ local function StopAimbot()
    FOVCircle.Visible = false
 end
 
--- ================== UI - MATCHING YOUR SCREENSHOT ==================
+-- ================== DARK MODERN UI ==================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 820, 0, 520)
-MainFrame.Position = UDim2.new(0.5, -410, 0.5, -260)
-MainFrame.BackgroundColor3 = Color3.fromRGB(8, 8, 10)
+MainFrame.Size = UDim2.new(0, 720, 0, 520)
+MainFrame.Position = UDim2.new(0.5, -360, 0.5, -260)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 22)
 MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
 
--- Title Bar
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
+
+-- Title Bar + Logo + Minimize + Close + Draggable (exactly as you had)
 local TitleBar = Instance.new("Frame")
 TitleBar.Size = UDim2.new(1, 0, 0, 60)
-TitleBar.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+TitleBar.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 TitleBar.Parent = MainFrame
+Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 12)
 
 local TitleLogo = Instance.new("ImageLabel")
-TitleLogo.Size = UDim2.new(0, 42, 0, 42)
-TitleLogo.Position = UDim2.new(0, 18, 0.5, -21)
+TitleLogo.Size = UDim2.new(0, 46, 0, 46)
+TitleLogo.Position = UDim2.new(0, 16, 0, 7)
 TitleLogo.BackgroundTransparency = 1
 TitleLogo.Image = "rbxassetid://118374262825356"
 TitleLogo.ScaleType = Enum.ScaleType.Fit
 TitleLogo.Parent = TitleBar
 
 local TitleText = Instance.new("TextLabel")
-TitleText.Size = UDim2.new(1, -120, 1, 0)
-TitleText.Position = UDim2.new(0, 70, 0, 0)
+TitleText.Size = UDim2.new(1, -100, 1, 0)
+TitleText.Position = UDim2.new(0, 72, 0, 0)
 TitleText.BackgroundTransparency = 1
 TitleText.Text = "Spectr Script"
 TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleText.Font = Enum.Font.GothamBold
-TitleText.TextSize = 26
+TitleText.TextSize = 23
 TitleText.TextXAlignment = Enum.TextXAlignment.Left
 TitleText.Parent = TitleBar
 
 local MinimizeBtn = Instance.new("TextButton")
 MinimizeBtn.Size = UDim2.new(0, 36, 0, 36)
-MinimizeBtn.Position = UDim2.new(1, -80, 0.5, -18)
+MinimizeBtn.Position = UDim2.new(1, -80, 0, 12)
 MinimizeBtn.BackgroundTransparency = 1
 MinimizeBtn.Text = "–"
-MinimizeBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
-MinimizeBtn.TextSize = 28
+MinimizeBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+MinimizeBtn.TextSize = 26
 MinimizeBtn.Font = Enum.Font.GothamBold
 MinimizeBtn.Parent = TitleBar
 
 local CloseBtn = Instance.new("TextButton")
 CloseBtn.Size = UDim2.new(0, 36, 0, 36)
-CloseBtn.Position = UDim2.new(1, -40, 0.5, -18)
+CloseBtn.Position = UDim2.new(1, -40, 0, 12)
 CloseBtn.BackgroundTransparency = 1
 CloseBtn.Text = "×"
 CloseBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
-CloseBtn.TextSize = 28
+CloseBtn.TextSize = 26
 CloseBtn.Font = Enum.Font.GothamBold
 CloseBtn.Parent = TitleBar
 
--- Left Sidebar
-local LeftSidebar = Instance.new("Frame")
-LeftSidebar.Size = UDim2.new(0, 200, 1, -60)
-LeftSidebar.Position = UDim2.new(0, 0, 0, 60)
-LeftSidebar.BackgroundColor3 = Color3.fromRGB(12, 12, 14)
-LeftSidebar.BorderSizePixel = 0
-LeftSidebar.Parent = MainFrame
+-- Minimized Logo
+local Logo = nil
+local function CreateMinimizeLogo()
+   if Logo then return end
+   Logo = Instance.new("ImageButton")
+   Logo.Size = UDim2.new(0, 90, 0, 55)
+   Logo.Position = UDim2.new(0, 30, 0, 30)
+   Logo.BackgroundTransparency = 1
+   Logo.Image = "rbxassetid://118374262825356"
+   Logo.ScaleType = Enum.ScaleType.Fit
+   Logo.Parent = ScreenGui
 
-local LeftList = Instance.new("UIListLayout")
-LeftList.Padding = UDim.new(0, 1)
-LeftList.Parent = LeftSidebar
+   local dragging = false
+   local dragStart, startPos
 
--- Right Area with big logo
-local RightArea = Instance.new("Frame")
-RightArea.Size = UDim2.new(1, -200, 1, -60)
-RightArea.Position = UDim2.new(0, 200, 0, 60)
-RightArea.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
-RightArea.BorderSizePixel = 0
-RightArea.Parent = MainFrame
-
-local BigLogo = Instance.new("ImageLabel")
-BigLogo.Size = UDim2.new(0.9, 0, 0.9, 0)
-BigLogo.Position = UDim2.new(0.05, 0, 0.05, 0)
-BigLogo.BackgroundTransparency = 1
-BigLogo.Image = "rbxassetid://118374262825356"
-BigLogo.ImageTransparency = 0.92
-BigLogo.ScaleType = Enum.ScaleType.Fit
-BigLogo.Parent = RightArea
-
--- Tab Content Frames
-local EspContent = Instance.new("Frame")
-EspContent.Size = UDim2.new(1,0,1,0)
-EspContent.BackgroundTransparency = 1
-EspContent.Visible = true
-EspContent.Parent = RightArea
-
-local AimbotContent = Instance.new("Frame")
-AimbotContent.Size = UDim2.new(1,0,1,0)
-AimbotContent.BackgroundTransparency = 1
-AimbotContent.Visible = false
-AimbotContent.Parent = RightArea
-
-local MacroContent = Instance.new("Frame")
-MacroContent.Size = UDim2.new(1,0,1,0)
-MacroContent.BackgroundTransparency = 1
-MacroContent.Visible = false
-MacroContent.Parent = RightArea
-
--- Create Tab Button
-local function CreateTabButton(name, content)
-   local btn = Instance.new("TextButton")
-   btn.Size = UDim2.new(1, 0, 0, 55)
-   btn.BackgroundColor3 = Color3.fromRGB(20, 20, 22)
-   btn.Text = name
-   btn.TextColor3 = Color3.fromRGB(220, 220, 220)
-   btn.Font = Enum.Font.GothamSemibold
-   btn.TextSize = 18
-   btn.Parent = LeftSidebar
-   Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 0)
-
-   btn.MouseButton1Click:Connect(function()
-      EspContent.Visible = false
-      AimbotContent.Visible = false
-      MacroContent.Visible = false
-      content.Visible = true
-
-      for _, b in ipairs(LeftSidebar:GetChildren()) do
-         if b:IsA("TextButton") then
-            b.BackgroundColor3 = (b == btn) and Color3.fromRGB(35, 35, 40) or Color3.fromRGB(20, 20, 22)
-         end
+   Logo.InputBegan:Connect(function(input)
+      if input.UserInputType == Enum.UserInputType.MouseButton1 then
+         dragging = true
+         dragStart = input.Position
+         startPos = Logo.Position
       end
    end)
-end
 
-CreateTabButton("Esp", EspContent)
-CreateTabButton("Aimbot", AimbotContent)
-CreateTabButton("Macro", MacroContent)
+   UserInputService.InputChanged:Connect(function(input)
+      if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+         local delta = input.Position - dragStart
+         Logo.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+      end
+   end)
 
--- Simple content for each tab (you can expand later)
-AddToggle = function(parent, name, default, callback)
-   -- placeholder toggle
-   local f = Instance.new("Frame")
-   f.Size = UDim2.new(0.9,0,0,50)
-   f.Position = UDim2.new(0.05,0,0,30)
-   f.BackgroundColor3 = Color3.fromRGB(25,25,28)
-   f.Parent = parent
-   Instance.new("UICorner", f).CornerRadius = UDim.new(0,6)
+   UserInputService.InputEnded:Connect(function(input)
+      if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+   end)
 
-   local l = Instance.new("TextLabel")
-   l.Size = UDim2.new(0.7,0,1,0)
-   l.BackgroundTransparency = 1
-   l.Text = name
-   l.TextColor3 = Color3.fromRGB(255,255,255)
-   l.TextSize = 16
-   l.Parent = f
-
-   local b = Instance.new("TextButton")
-   b.Size = UDim2.new(0,90,0,32)
-   b.Position = UDim2.new(1,-100,0.5,-16)
-   b.BackgroundColor3 = default and Color3.fromRGB(0,255,100) or Color3.fromRGB(60,60,65)
-   b.Text = default and "ON" or "OFF"
-   b.TextColor3 = Color3.fromRGB(0,0,0)
-   b.Parent = f
-   Instance.new("UICorner", b).CornerRadius = UDim.new(0,6)
-
-   b.MouseButton1Click:Connect(function()
-      default = not default
-      b.BackgroundColor3 = default and Color3.fromRGB(0,255,100) or Color3.fromRGB(60,60,65)
-      b.Text = default and "ON" or "OFF"
-      callback(default)
+   Logo.MouseButton1Click:Connect(function()
+      MainFrame.Visible = true
+      Logo.Visible = false
    end)
 end
 
-AddToggle(EspContent, "Enable ESP", false, ToggleESP)
-AddToggle(AimbotContent, "Enable Aimbot", false, function(v) AimbotEnabled = v if v then StartAimbot() FOVCircle.Visible = true else StopAimbot() end end)
-AddToggle(MacroContent, "Auto Tapper", false, function(v) AutoTapEnabled = v if v then StartAutoTapper() else StopAutoTapper() end end)
+MinimizeBtn.MouseButton1Click:Connect(function()
+   MainFrame.Visible = false
+   CreateMinimizeLogo()
+   Logo.Visible = true
+end)
 
--- Draggable
-local dragging = false
+CloseBtn.MouseButton1Click:Connect(function()
+   ScreenGui:Destroy()
+end)
+
+-- Draggable MainFrame
+local dragging, dragInput, dragStartPos, startFramePos
 MainFrame.InputBegan:Connect(function(input)
    if input.UserInputType == Enum.UserInputType.MouseButton1 then
       dragging = true
@@ -394,8 +348,11 @@ MainFrame.InputBegan:Connect(function(input)
       startFramePos = MainFrame.Position
    end
 end)
+MainFrame.InputChanged:Connect(function(input)
+   if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
+end)
 UserInputService.InputChanged:Connect(function(input)
-   if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+   if dragging and input == dragInput then
       local delta = input.Position - dragStartPos
       MainFrame.Position = UDim2.new(startFramePos.X.Scale, startFramePos.X.Offset + delta.X, startFramePos.Y.Scale, startFramePos.Y.Offset + delta.Y)
    end
@@ -404,5 +361,230 @@ UserInputService.InputEnded:Connect(function(input)
    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
 end)
 
+-- Left / Right Frames, Divider, AddToggle, AddSlider (exactly as your original)
+local LeftFrame = Instance.new("Frame")
+LeftFrame.Size = UDim2.new(0.35, 0, 1, -80)
+LeftFrame.Position = UDim2.new(0, 15, 0, 70)
+LeftFrame.BackgroundTransparency = 1
+LeftFrame.Parent = MainFrame
+
+local LeftTitle = Instance.new("TextLabel")
+LeftTitle.Size = UDim2.new(1, 0, 0, 30)
+LeftTitle.BackgroundTransparency = 1
+LeftTitle.Text = "Features"
+LeftTitle.TextColor3 = Color3.fromRGB(180, 180, 180)
+LeftTitle.Font = Enum.Font.GothamBold
+LeftTitle.TextSize = 18
+LeftTitle.Parent = LeftFrame
+
+local LeftList = Instance.new("UIListLayout")
+LeftList.Padding = UDim.new(0, 8)
+LeftList.Parent = LeftFrame
+
+local Divider = Instance.new("Frame")
+Divider.Size = UDim2.new(0, 1, 1, -90)
+Divider.Position = UDim2.new(0.39, 0, 0, 75)
+Divider.BackgroundColor3 = Color3.fromRGB(45, 45, 47)
+Divider.Parent = MainFrame
+
+local RightFrame = Instance.new("Frame")
+RightFrame.Size = UDim2.new(0.58, 0, 1, -80)
+RightFrame.Position = UDim2.new(0.41, 0, 0, 70)
+RightFrame.BackgroundTransparency = 1
+RightFrame.Parent = MainFrame
+
+local RightTitle = Instance.new("TextLabel")
+RightTitle.Size = UDim2.new(1, 0, 0, 30)
+RightTitle.BackgroundTransparency = 1
+RightTitle.Text = "Settings"
+RightTitle.TextColor3 = Color3.fromRGB(180, 180, 180)
+RightTitle.Font = Enum.Font.GothamBold
+RightTitle.TextSize = 18
+RightTitle.Parent = RightFrame
+
+local RightList = Instance.new("UIListLayout")
+RightList.Padding = UDim.new(0, 10)
+RightList.Parent = RightFrame
+
+local function AddToggle(parent, name, default, callback)
+   local frame = Instance.new("Frame")
+   frame.Size = UDim2.new(1, 0, 0, 52)
+   frame.BackgroundColor3 = Color3.fromRGB(28, 28, 30)
+   frame.Parent = parent
+   Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+
+   local label = Instance.new("TextLabel")
+   label.Size = UDim2.new(0.5, 0, 1, 0)
+   label.BackgroundTransparency = 1
+   label.Text = name
+   label.TextColor3 = Color3.fromRGB(220, 220, 220)
+   label.Font = Enum.Font.GothamSemibold
+   label.TextSize = 16
+   label.TextXAlignment = Enum.TextXAlignment.Left
+   label.Position = UDim2.new(0, 18, 0, 0)
+   label.Parent = frame
+
+   local btn = Instance.new("TextButton")
+   btn.Size = UDim2.new(0, 78, 0, 32)
+   btn.Position = UDim2.new(1, -88, 0.5, -16)
+   btn.BackgroundColor3 = default and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(55, 55, 60)
+   btn.Text = default and "ON" or "OFF"
+   btn.TextColor3 = default and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(200, 200, 200)
+   btn.Font = Enum.Font.GothamBold
+   btn.TextSize = 14
+   btn.Parent = frame
+   Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+
+   btn.MouseButton1Click:Connect(function()
+      default = not default
+      btn.BackgroundColor3 = default and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(55, 55, 60)
+      btn.TextColor3 = default and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(200, 200, 200)
+      btn.Text = default and "ON" or "OFF"
+      callback(default)
+   end)
+end
+
+local function AddSlider(parent, name, minVal, maxVal, default, increment, callback)
+   -- (your original slider code - unchanged)
+   local frame = Instance.new("Frame")
+   frame.Size = UDim2.new(1, 0, 0, 68)
+   frame.BackgroundColor3 = Color3.fromRGB(28, 28, 30)
+   frame.Parent = parent
+   Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+
+   local label = Instance.new("TextLabel")
+   label.Size = UDim2.new(1, -30, 0, 22)
+   label.BackgroundTransparency = 1
+   label.Text = name .. ": " .. default
+   label.TextColor3 = Color3.fromRGB(220, 220, 220)
+   label.Font = Enum.Font.GothamSemibold
+   label.TextSize = 15
+   label.Position = UDim2.new(0, 18, 0, 8)
+   label.Parent = frame
+
+   local bar = Instance.new("Frame")
+   bar.Size = UDim2.new(1, -36, 0, 10)
+   bar.Position = UDim2.new(0, 18, 0, 42)
+   bar.BackgroundColor3 = Color3.fromRGB(45, 45, 48)
+   bar.Parent = frame
+   Instance.new("UICorner", bar).CornerRadius = UDim.new(1, 0)
+
+   local fill = Instance.new("Frame")
+   fill.Size = UDim2.new((default - minVal) / (maxVal - minVal), 0, 1, 0)
+   fill.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+   fill.Parent = bar
+   Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
+
+   local knob = Instance.new("TextButton")
+   knob.Size = UDim2.new(0, 18, 0, 18)
+   knob.Position = UDim2.new((default - minVal) / (maxVal - minVal), -9, 0.5, -9)
+   knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+   knob.Text = ""
+   knob.Parent = bar
+   Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
+
+   local value = default
+   local function update()
+      local percent = (value - minVal) / (maxVal - minVal)
+      fill.Size = UDim2.new(percent, 0, 1, 0)
+      knob.Position = UDim2.new(percent, -9, 0.5, -9)
+      label.Text = name .. ": " .. math.floor(value / increment) * increment
+   end
+   update()
+
+   local dragging = false
+   knob.MouseButton1Down:Connect(function() dragging = true end)
+
+   UserInputService.InputChanged:Connect(function(input)
+      if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+         local barPos = bar.AbsolutePosition.X
+         local barSize = bar.AbsoluteSize.X
+         local percent = math.clamp((input.Position.X - barPos) / barSize, 0, 1)
+         value = minVal + percent * (maxVal - minVal)
+         value = math.floor(value / increment) * increment
+         update()
+         callback(value)
+      end
+   end)
+
+   UserInputService.InputEnded:Connect(function(input)
+      if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+   end)
+end
+
+-- ================== BUILD UI ==================
+AddToggle(LeftFrame, "ESP", false, ToggleESP)
+AddToggle(LeftFrame, "Aimbot", false, function(v)
+   AimbotEnabled = v
+   if v then StartAimbot() FOVCircle.Visible = true else StopAimbot() end
+end)
+AddToggle(LeftFrame, "Auto Tapper", false, function(v)
+   AutoTapEnabled = v
+   if v then StartAutoTapper() else StopAutoTapper() end
+end)
+
+AddSlider(RightFrame, "Spawn Exclusion Radius", 10, 200, 60, 5, function(v) SpawnExclusionDistance = v end)
+AddSlider(RightFrame, "FOV Radius", 30, 500, 150, 5, function(v) AimFOV = v end)
+AddSlider(RightFrame, "Smoothing", 0.05, 1, 0.2, 0.05, function(v) Smoothing = v end)
+
+-- Aim Part
+local aimFrame = Instance.new("Frame")
+aimFrame.Size = UDim2.new(1, 0, 0, 68)
+aimFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 30)
+aimFrame.Parent = RightFrame
+Instance.new("UICorner", aimFrame).CornerRadius = UDim.new(0, 8)
+
+local aimLabel = Instance.new("TextLabel")
+aimLabel.Size = UDim2.new(1, 0, 0, 22)
+aimLabel.BackgroundTransparency = 1
+aimLabel.Text = "Aim Part"
+aimLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+aimLabel.Font = Enum.Font.GothamSemibold
+aimLabel.TextSize = 15
+aimLabel.Position = UDim2.new(0, 18, 0, 8)
+aimLabel.Parent = aimFrame
+
+local aimContainer = Instance.new("Frame")
+aimContainer.Size = UDim2.new(1, -36, 0, 30)
+aimContainer.Position = UDim2.new(0, 18, 0, 32)
+aimContainer.BackgroundTransparency = 1
+aimContainer.Parent = aimFrame
+
+local aimList = Instance.new("UIListLayout")
+aimList.FillDirection = Enum.FillDirection.Horizontal
+aimList.Padding = UDim.new(0, 6)
+aimList.Parent = aimContainer
+
+for _, part in ipairs({"Head", "UpperTorso", "LowerPart"}) do
+   local btn = Instance.new("TextButton")
+   btn.Size = UDim2.new(0, 124, 1, 0)
+   btn.BackgroundColor3 = (part == AimPart) and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(45, 45, 48)
+   btn.Text = part
+   btn.TextColor3 = (part == AimPart) and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(200, 200, 200)
+   btn.Font = Enum.Font.Gotham
+   btn.TextSize = 14
+   btn.Parent = aimContainer
+   Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+
+   btn.MouseButton1Click:Connect(function()
+      AimPart = part
+      for _, b in ipairs(aimContainer:GetChildren()) do
+         if b:IsA("TextButton") then
+            b.BackgroundColor3 = (b.Text == part) and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(45, 45, 48)
+            b.TextColor3 = (b.Text == part) and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(200, 200, 200)
+         end
+      end
+   end)
+end
+
+AddSlider(RightFrame, "Tap Speed", 0.01, 0.15, 0.05, 0.01, function(v) TapSpeed = v end)
+
+-- Auto Setup
+Players.PlayerAdded:Connect(function(plr)
+   plr.CharacterAdded:Connect(function(char)
+      if ESPEnabled then CreateESPForCharacter(char, plr) end
+   end)
+end)
+
 UpdateFOVCircle()
-print("✅ Spectr UI Updated - Now matches your screenshot style!")
+print("✅ Spectr Dark UI Loaded! (UI should now appear)")
