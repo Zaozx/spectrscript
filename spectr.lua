@@ -41,16 +41,20 @@ local function IsAtSpawn(character)
 end
 
 local function IsVisible(targetCharacter)
-   if not targetCharacter or not targetCharacter:FindFirstChild("HumanoidRootPart") then return false end
-   local rootPart = targetCharacter.HumanoidRootPart
-   local direction = (rootPart.Position - Camera.CFrame.Position).Unit
-   local distance = (rootPart.Position - Camera.CFrame.Position).Magnitude
+   if not targetCharacter then return false end
    
+   local checkPart = targetCharacter:FindFirstChild(AimPart) or targetCharacter:FindFirstChild("Head")
+   if not checkPart then return false end
+
+   local direction = (checkPart.Position - Camera.CFrame.Position).Unit
+   local distance = (checkPart.Position - Camera.CFrame.Position).Magnitude
+
    local raycastParams = RaycastParams.new()
    raycastParams.FilterDescendantsInstances = {LocalPlayer.Character or {}}
    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+
+   local result = workspace:Raycast(Camera.CFrame.Position, direction * (distance + 10), raycastParams)
    
-   local result = workspace:Raycast(Camera.CFrame.Position, direction * (distance + 5), raycastParams)
    return result == nil or result.Instance:IsDescendantOf(targetCharacter)
 end
 
