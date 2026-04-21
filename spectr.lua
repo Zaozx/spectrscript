@@ -11,8 +11,6 @@ if not _G[ProtectionConfig.SecretKey] then
     return
 end
 -------------------------------------------------------------------------------
--- 👇 YOUR MAIN SCRIPT CODE STARTS HERE 👇
--------------------------------------------------------------------------------
 print(ProtectionConfig.HubName .. " Loaded Successfully!")
 
 -- // Spectr - Dark Modern UI + Distance + Box ESP + ESP Settings \\ --
@@ -29,7 +27,7 @@ local SpawnExclusionDistance = 60
 
 local Highlights = {}
 local NameLabels = {}
-local Boxes = {}                    -- For Box ESP
+local Boxes = {}
 
 local ESPEnabled = false
 local PlayerCountText = nil
@@ -84,7 +82,6 @@ local function CreateESPForCharacter(character, player)
    if not character or Highlights[character] then return end
    if not character:FindFirstChild("HumanoidRootPart") or not character:FindFirstChild("Head") then return end
 
-   -- Highlight
    if ShowHighlight then
       local highlight = Instance.new("Highlight")
       highlight.FillColor = Color3.fromRGB(255, 0, 0)
@@ -97,7 +94,6 @@ local function CreateESPForCharacter(character, player)
       Highlights[character] = highlight
    end
 
-   -- Name + Distance
    if ShowNames then
       local head = character:FindFirstChild("Head")
       if head then
@@ -122,7 +118,6 @@ local function CreateESPForCharacter(character, player)
       end
    end
 
-   -- Box ESP
    if ShowBox then
       local box = {}
       for i = 1, 4 do
@@ -172,12 +167,10 @@ local function UpdateESP()
 
       local isVis = IsVisible(character)
 
-      -- Update Highlight
       if highlight then
          highlight.FillColor = isVis and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
       end
 
-      -- Update Name + Distance
       if NameLabels[character] then
          local root = character:FindFirstChild("HumanoidRootPart")
          if root then
@@ -189,11 +182,10 @@ local function UpdateESP()
          end
       end
 
-      -- Update Box ESP
       if Boxes[character] then
          local root = character:FindFirstChild("HumanoidRootPart")
          if root then
-            local size = character:GetExtentsSize()
+            local size = character:GetExtentsSize() * 1.1
             local top = Camera:WorldToScreenPoint(root.Position + Vector3.new(0, size.Y/2, 0))
             local bottom = Camera:WorldToScreenPoint(root.Position - Vector3.new(0, size.Y/2, 0))
             local left = Camera:WorldToScreenPoint(root.Position - Vector3.new(size.X/2, 0, 0))
@@ -307,7 +299,7 @@ CloseBtn.TextSize = 26
 CloseBtn.Font = Enum.Font.GothamBold
 CloseBtn.Parent = TitleBar
 
--- Smaller Minimized Logo
+-- Minimized Logo (smaller)
 local Logo = nil
 local function CreateMinimizeLogo()
    if Logo then return end
@@ -379,7 +371,7 @@ UserInputService.InputEnded:Connect(function(input)
    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
 end)
 
--- Left Side (Features)
+-- Left Side
 local LeftFrame = Instance.new("Frame")
 LeftFrame.Size = UDim2.new(0.38, 0, 1, -80)
 LeftFrame.Position = UDim2.new(0, 15, 0, 70)
@@ -406,7 +398,7 @@ Divider.Position = UDim2.new(0.39, 0, 0, 75)
 Divider.BackgroundColor3 = Color3.fromRGB(45, 45, 47)
 Divider.Parent = MainFrame
 
--- Right Side (Settings)
+-- Right Side
 local RightFrame = Instance.new("Frame")
 RightFrame.Size = UDim2.new(0.58, 0, 1, -80)
 RightFrame.Position = UDim2.new(0.41, 0, 0, 70)
