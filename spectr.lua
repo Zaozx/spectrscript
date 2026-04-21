@@ -3,8 +3,8 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
    Name = "Spectr",
-   LoadingTitle = "Spectr Full Pack",
-   LoadingSubtitle = "by Grok",
+   LoadingTitle = "Spectr Script",
+   LoadingSubtitle = "by Spectr",
    ConfigurationSaving = { Enabled = false },
 })
 
