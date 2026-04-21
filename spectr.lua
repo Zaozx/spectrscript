@@ -1,32 +1,21 @@
 -- ⚠️ IMPORTANT: Put this code at the VERY TOP of your Main Script (before obfuscating) ⚠️
-
 local ProtectionConfig = {
-    -- 🔴 CRITICAL: This MUST exactly match the 'Secret' value in your Key System's Config!
-    -- If your Key System has: Secret = "Test"
-    -- Then this must also be: SecretKey = "Test"
     SecretKey = "Spectr",
-    
-    -- The name of your Hub (shown in the kick message if they try to bypass)
     HubName = "Spectr"
 }
-
--- Anti-Bypass Logic: Checks if the Key System successfully set the global variable
 if not _G[ProtectionConfig.SecretKey] then
     local player = game:GetService("Players").LocalPlayer
     if player then
         player:Kick("\n🛡️ Unauthorized Execution 🛡️\n\nPlease use the official Key System to run " .. ProtectionConfig.HubName)
     end
-    return -- Stops the rest of the script from loading!
+    return
 end
-
 -------------------------------------------------------------------------------
 -- 👇 YOUR MAIN SCRIPT CODE STARTS HERE 👇
 -------------------------------------------------------------------------------
-
 print(ProtectionConfig.HubName .. " Loaded Successfully!")
 
--- // Spectr - Dark Modern UI Matching Screenshot \\ --
-
+-- // Spectr - Dark Modern UI + Distance + Box ESP + ESP Settings \\ --
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
@@ -40,8 +29,15 @@ local SpawnExclusionDistance = 60
 
 local Highlights = {}
 local NameLabels = {}
+local Boxes = {}                    -- For Box ESP
+
 local ESPEnabled = false
 local PlayerCountText = nil
+
+-- ESP Settings
+local ShowNames = true
+local ShowHighlight = true
+local ShowBox = true
 
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Thickness = 2
@@ -58,10 +54,11 @@ local AimPart = "Head"
 
 local AutoTapEnabled = false
 local TapSpeed = 0.05
+
 local TapConnection = nil
 local AimbotConnection = nil
 
--- Helper Functions (same as before)
+-- Helper Functions
 local function IsAtSpawn(character)
    if not character or not character:FindFirstChild("HumanoidRootPart") then return false end
    return (character.HumanoidRootPart.Position - SpawnPosition).Magnitude < SpawnExclusionDistance
@@ -69,7 +66,6 @@ end
 
 local function IsVisible(targetCharacter)
    if not targetCharacter then return false end
-   
    local checkPart = targetCharacter:FindFirstChild(AimPart) or targetCharacter:FindFirstChild("Head")
    if not checkPart then return false end
 
@@ -81,7 +77,6 @@ local function IsVisible(targetCharacter)
    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
 
    local result = workspace:Raycast(Camera.CFrame.Position, direction * (distance + 10), raycastParams)
-   
    return result == nil or result.Instance:IsDescendantOf(targetCharacter)
 end
 
@@ -89,36 +84,55 @@ local function CreateESPForCharacter(character, player)
    if not character or Highlights[character] then return end
    if not character:FindFirstChild("HumanoidRootPart") or not character:FindFirstChild("Head") then return end
 
-   local highlight = Instance.new("Highlight")
-   highlight.FillColor = Color3.fromRGB(255, 0, 0)
-   highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-   highlight.FillTransparency = 0.4
-   highlight.OutlineTransparency = 0
-   highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-   highlight.Adornee = character
-   highlight.Parent = character
-   Highlights[character] = highlight
+   -- Highlight
+   if ShowHighlight then
+      local highlight = Instance.new("Highlight")
+      highlight.FillColor = Color3.fromRGB(255, 0, 0)
+      highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+      highlight.FillTransparency = 0.4
+      highlight.OutlineTransparency = 0
+      highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+      highlight.Adornee = character
+      highlight.Parent = character
+      Highlights[character] = highlight
+   end
 
-   local head = character:FindFirstChild("Head")
-   if head then
-      local billboard = Instance.new("BillboardGui")
-      billboard.Adornee = head
-      billboard.Size = UDim2.new(0, 200, 0, 50)
-      billboard.StudsOffset = Vector3.new(0, 3, 0)
-      billboard.AlwaysOnTop = true
-      billboard.Parent = character
+   -- Name + Distance
+   if ShowNames then
+      local head = character:FindFirstChild("Head")
+      if head then
+         local billboard = Instance.new("BillboardGui")
+         billboard.Adornee = head
+         billboard.Size = UDim2.new(0, 200, 0, 50)
+         billboard.StudsOffset = Vector3.new(0, 3, 0)
+         billboard.AlwaysOnTop = true
+         billboard.Parent = character
 
-      local textLabel = Instance.new("TextLabel")
-      textLabel.Size = UDim2.new(1, 0, 1, 0)
-      textLabel.BackgroundTransparency = 1
-      textLabel.Text = player.Name
-      textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-      textLabel.TextStrokeTransparency = 0
-      textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-      textLabel.Font = Enum.Font.GothamBold
-      textLabel.TextSize = 16
-      textLabel.Parent = billboard
-      NameLabels[character] = billboard
+         local textLabel = Instance.new("TextLabel")
+         textLabel.Size = UDim2.new(1, 0, 1, 0)
+         textLabel.BackgroundTransparency = 1
+         textLabel.Text = player.Name
+         textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+         textLabel.TextStrokeTransparency = 0
+         textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+         textLabel.Font = Enum.Font.GothamBold
+         textLabel.TextSize = 16
+         textLabel.Parent = billboard
+         NameLabels[character] = billboard
+      end
+   end
+
+   -- Box ESP
+   if ShowBox then
+      local box = {}
+      for i = 1, 4 do
+         local line = Drawing.new("Line")
+         line.Thickness = 2
+         line.Color = Color3.fromRGB(255, 255, 255)
+         line.Transparency = 1
+         box[i] = line
+      end
+      Boxes[character] = box
    end
 end
 
@@ -135,21 +149,67 @@ local function UpdateESP()
       if not character or not character.Parent or not character:FindFirstChild("HumanoidRootPart") then
          if highlight then highlight:Destroy() end
          if NameLabels[character] then NameLabels[character]:Destroy() end
+         if Boxes[character] then
+            for _, line in pairs(Boxes[character]) do line:Remove() end
+         end
          Highlights[character] = nil
          NameLabels[character] = nil
+         Boxes[character] = nil
          continue
       end
 
       if IsAtSpawn(character) then
          if highlight then highlight:Destroy() end
          if NameLabels[character] then NameLabels[character]:Destroy() end
+         if Boxes[character] then
+            for _, line in pairs(Boxes[character]) do line:Remove() end
+         end
          Highlights[character] = nil
          NameLabels[character] = nil
+         Boxes[character] = nil
          continue
       end
 
       local isVis = IsVisible(character)
-      highlight.FillColor = isVis and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+
+      -- Update Highlight
+      if highlight then
+         highlight.FillColor = isVis and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+      end
+
+      -- Update Name + Distance
+      if NameLabels[character] then
+         local root = character:FindFirstChild("HumanoidRootPart")
+         if root then
+            local distance = math.floor((root.Position - Camera.CFrame.Position).Magnitude)
+            local textLabel = NameLabels[character]:FindFirstChildWhichIsA("TextLabel")
+            if textLabel then
+               textLabel.Text = player.Name .. " [" .. distance .. "]"
+            end
+         end
+      end
+
+      -- Update Box ESP
+      if Boxes[character] then
+         local root = character:FindFirstChild("HumanoidRootPart")
+         if root then
+            local size = character:GetExtentsSize()
+            local top = Camera:WorldToScreenPoint(root.Position + Vector3.new(0, size.Y/2, 0))
+            local bottom = Camera:WorldToScreenPoint(root.Position - Vector3.new(0, size.Y/2, 0))
+            local left = Camera:WorldToScreenPoint(root.Position - Vector3.new(size.X/2, 0, 0))
+            local right = Camera:WorldToScreenPoint(root.Position + Vector3.new(size.X/2, 0, 0))
+
+            local box = Boxes[character]
+            box[1].From = Vector2.new(top.X, top.Y)      box[1].To = Vector2.new(right.X, top.Y)
+            box[2].From = Vector2.new(right.X, top.Y)    box[2].To = Vector2.new(right.X, bottom.Y)
+            box[3].From = Vector2.new(right.X, bottom.Y) box[3].To = Vector2.new(left.X, bottom.Y)
+            box[4].From = Vector2.new(left.X, bottom.Y)  box[4].To = Vector2.new(left.X, top.Y)
+
+            for _, line in pairs(box) do line.Visible = true end
+         else
+            for _, line in pairs(Boxes[character]) do line.Visible = false end
+         end
+      end
    end
 end
 
@@ -177,71 +237,14 @@ local function ToggleESP(state)
       RunService:UnbindFromRenderStep("SpectrESP")
       for _, hl in pairs(Highlights) do if hl then hl:Destroy() end end
       for _, lbl in pairs(NameLabels) do if lbl then lbl:Destroy() end end
+      for _, box in pairs(Boxes) do
+         for _, line in pairs(box) do line:Remove() end
+      end
       Highlights = {}
       NameLabels = {}
+      Boxes = {}
       if PlayerCountText then PlayerCountText.Parent:Destroy() PlayerCountText = nil end
    end
-end
-
-local function StartAutoTapper()
-   if TapConnection then return end
-   TapConnection = RunService.Heartbeat:Connect(function()
-      if not AutoTapEnabled or not UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then return end
-      VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Q, false, game)
-      task.wait(TapSpeed)
-      VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Q, false, game)
-      task.wait(TapSpeed)
-      VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.One, false, game)
-      task.wait(TapSpeed)
-      VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.One, false, game)
-   end)
-end
-
-local function StopAutoTapper()
-   if TapConnection then TapConnection:Disconnect() TapConnection = nil end
-end
-
-local function UpdateFOVCircle()
-   FOVCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
-   FOVCircle.Radius = AimFOV
-end
-
-local function GetClosestPlayer()
-   local closest, shortest = nil, math.huge
-   for _, plr in ipairs(Players:GetPlayers()) do
-      if plr == LocalPlayer or not plr.Character then continue end
-      local char = plr.Character
-      local part = char:FindFirstChild(AimPart)
-      if not part or IsAtSpawn(char) then continue end
-      local screen, onScreen = Camera:WorldToScreenPoint(part.Position)
-      if onScreen then
-         local dist = (Vector2.new(screen.X, screen.Y) - Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)).Magnitude
-         if dist < AimFOV and dist < shortest then
-            shortest = dist
-            closest = plr
-         end
-      end
-   end
-   return closest
-end
-
-local function StartAimbot()
-   if AimbotConnection then return end
-   AimbotConnection = RunService.RenderStepped:Connect(function()
-      UpdateFOVCircle()
-      if not AimbotEnabled then return end
-      local target = GetClosestPlayer()
-      if target and target.Character and target.Character:FindFirstChild(AimPart) then
-         local targetPos = target.Character[AimPart].Position
-         Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(Camera.CFrame.Position, targetPos), Smoothing)
-      end
-   end)
-end
-
-local function StopAimbot()
-   if AimbotConnection then AimbotConnection:Disconnect() end
-   AimbotConnection = nil
-   FOVCircle.Visible = false
 end
 
 -- ================== DARK MODERN UI ==================
@@ -265,7 +268,6 @@ TitleBar.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 TitleBar.Parent = MainFrame
 Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 12)
 
--- Logo in Title
 local TitleLogo = Instance.new("ImageLabel")
 TitleLogo.Size = UDim2.new(0, 46, 0, 46)
 TitleLogo.Position = UDim2.new(0, 16, 0, 7)
@@ -305,7 +307,7 @@ CloseBtn.TextSize = 26
 CloseBtn.Font = Enum.Font.GothamBold
 CloseBtn.Parent = TitleBar
 
--- Minimize to Logo
+-- Smaller Minimized Logo
 local Logo = nil
 local function CreateMinimizeLogo()
    if Logo then return end
@@ -379,7 +381,7 @@ end)
 
 -- Left Side (Features)
 local LeftFrame = Instance.new("Frame")
-LeftFrame.Size = UDim2.new(0.35, 0, 1, -80)
+LeftFrame.Size = UDim2.new(0.38, 0, 1, -80)
 LeftFrame.Position = UDim2.new(0, 15, 0, 70)
 LeftFrame.BackgroundTransparency = 1
 LeftFrame.Parent = MainFrame
@@ -424,7 +426,7 @@ local RightList = Instance.new("UIListLayout")
 RightList.Padding = UDim.new(0, 10)
 RightList.Parent = RightFrame
 
--- Toggle (dark style)
+-- Toggle Helper
 local function AddToggle(parent, name, default, callback)
    local frame = Instance.new("Frame")
    frame.Size = UDim2.new(1, 0, 0, 52)
@@ -463,7 +465,7 @@ local function AddToggle(parent, name, default, callback)
    end)
 end
 
--- Slider (dark style)
+-- Slider Helper
 local function AddSlider(parent, name, minVal, maxVal, default, increment, callback)
    local frame = Instance.new("Frame")
    frame.Size = UDim2.new(1, 0, 0, 68)
@@ -533,14 +535,9 @@ end
 
 -- ================== BUILD UI ==================
 AddToggle(LeftFrame, "ESP", false, ToggleESP)
-AddToggle(LeftFrame, "Aimbot", false, function(v)
-   AimbotEnabled = v
-   if v then StartAimbot() FOVCircle.Visible = true else StopAimbot() end
-end)
-AddToggle(LeftFrame, "Auto Tapper", false, function(v)
-   AutoTapEnabled = v
-   if v then StartAutoTapper() else StopAutoTapper() end
-end)
+AddToggle(LeftFrame, "Names", true, function(v) ShowNames = v end)
+AddToggle(LeftFrame, "Highlight", true, function(v) ShowHighlight = v end)
+AddToggle(LeftFrame, "Box ESP", true, function(v) ShowBox = v end)
 
 AddSlider(RightFrame, "Spawn Exclusion Radius", 10, 200, 60, 5, function(v) SpawnExclusionDistance = v end)
 AddSlider(RightFrame, "FOV Radius", 30, 500, 150, 5, function(v) AimFOV = v end)
@@ -574,7 +571,7 @@ aimList.FillDirection = Enum.FillDirection.Horizontal
 aimList.Padding = UDim.new(0, 6)
 aimList.Parent = aimContainer
 
-for _, part in ipairs({"Head", "UpperTorso", "LowerPart"}) do
+for _, part in ipairs({"Head", "UpperTorso", "HumanoidRootPart"}) do
    local btn = Instance.new("TextButton")
    btn.Size = UDim2.new(0, 124, 1, 0)
    btn.BackgroundColor3 = (part == AimPart) and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(45, 45, 48)
@@ -606,5 +603,4 @@ Players.PlayerAdded:Connect(function(plr)
 end)
 
 UpdateFOVCircle()
-
-print("✅ Spectr Dark UI Loaded!")
+print("✅ Spectr Loaded with Distance, Box ESP, and ESP Settings!")
