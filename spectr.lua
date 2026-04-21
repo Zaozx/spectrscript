@@ -1,17 +1,5 @@
--- // Spectr Full Script - ESP + Adjustable Spawn Exclusion (No Tracers) \\ --
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
-local Window = Rayfield:CreateWindow({
-   Name = "Spectr",
-   LoadingTitle = "Spectr Script (Sniper Arena)",
-   LoadingSubtitle = "by Spectr",
-   ConfigurationSaving = { Enabled = false },
-})
+-- // Spectr - Dark Modern UI Matching Screenshot \\ --
 
-local ESPTab = Window:CreateTab("ESP", 4483362458)
-local AimbotTab = Window:CreateTab("Aimbot", 4483362458)
-local CombatTab = Window:CreateTab("Combat", 4483362458)
-
--- Services
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
@@ -19,48 +7,37 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 
--- ================== SPAWN EXCLUSION (Adjustable) ==================
+-- ================== CORE FEATURES ==================
 local SpawnPosition = Vector3.new(0, 497.5, 4000)
 local SpawnExclusionDistance = 60
 
-local function IsAtSpawn(character)
-   if not character or not character:FindFirstChild("HumanoidRootPart") then
-      return false
-   end
-   local distance = (character.HumanoidRootPart.Position - SpawnPosition).Magnitude
-   return distance < SpawnExclusionDistance
-end
-
--- ================== ESP + NAMES + PLAYER COUNT ==================
 local Highlights = {}
 local NameLabels = {}
 local ESPEnabled = false
 local PlayerCountText = nil
 
-local function CreatePlayerCount()
-   if PlayerCountText then return end
-   local screenGui = Instance.new("ScreenGui")
-   screenGui.ResetOnSpawn = false
-   screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-   
-   PlayerCountText = Instance.new("TextLabel")
-   PlayerCountText.Size = UDim2.new(0, 320, 0, 45)
-   PlayerCountText.Position = UDim2.new(0.5, -160, 0, 15)
-   PlayerCountText.BackgroundTransparency = 0.6
-   PlayerCountText.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-   PlayerCountText.TextColor3 = Color3.fromRGB(255, 255, 255)
-   PlayerCountText.TextStrokeTransparency = 0
-   PlayerCountText.Font = Enum.Font.GothamBold
-   PlayerCountText.TextSize = 18
-   PlayerCountText.Text = "Players in ESP: 0"
-   PlayerCountText.Parent = screenGui
-end
+local FOVCircle = Drawing.new("Circle")
+FOVCircle.Thickness = 2
+FOVCircle.NumSides = 64
+FOVCircle.Color = Color3.fromRGB(255, 255, 255)
+FOVCircle.Transparency = 0.7
+FOVCircle.Filled = false
+FOVCircle.Visible = false
 
-local function UpdatePlayerCount()
-   if not PlayerCountText then return end
-   local count = 0
-   for _ in pairs(Highlights) do count += 1 end
-   PlayerCountText.Text = "Players in ESP: " .. count
+local AimbotEnabled = false
+local AimFOV = 150
+local Smoothing = 0.2
+local AimPart = "Head"
+
+local AutoTapEnabled = false
+local TapSpeed = 0.05
+local TapConnection = nil
+local AimbotConnection = nil
+
+-- Helper Functions (same as before)
+local function IsAtSpawn(character)
+   if not character or not character:FindFirstChild("HumanoidRootPart") then return false end
+   return (character.HumanoidRootPart.Position - SpawnPosition).Magnitude < SpawnExclusionDistance
 end
 
 local function IsVisible(targetCharacter)
@@ -82,7 +59,6 @@ local function CreateESPForCharacter(character, player)
    if not character:FindFirstChild("HumanoidRootPart") or not character:FindFirstChild("Head") then return end
 
    local highlight = Instance.new("Highlight")
-   highlight.Name = "SpectrHighlight"
    highlight.FillColor = Color3.fromRGB(255, 0, 0)
    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
    highlight.FillTransparency = 0.4
@@ -99,7 +75,6 @@ local function CreateESPForCharacter(character, player)
       billboard.Size = UDim2.new(0, 200, 0, 50)
       billboard.StudsOffset = Vector3.new(0, 3, 0)
       billboard.AlwaysOnTop = true
-      billboard.LightInfluence = 0
       billboard.Parent = character
 
       local textLabel = Instance.new("TextLabel")
@@ -117,7 +92,6 @@ local function CreateESPForCharacter(character, player)
 end
 
 local function UpdateESP()
-   -- Auto-create ESP for new players who left spawn
    for _, plr in ipairs(Players:GetPlayers()) do
       if plr ~= LocalPlayer and plr.Character and not Highlights[plr.Character] then
          if not IsAtSpawn(plr.Character) then
@@ -126,7 +100,6 @@ local function UpdateESP()
       end
    end
 
-   -- Update existing ESP
    for character, highlight in pairs(Highlights) do
       if not character or not character.Parent or not character:FindFirstChild("HumanoidRootPart") then
          if highlight then highlight:Destroy() end
@@ -147,39 +120,42 @@ local function UpdateESP()
       local isVis = IsVisible(character)
       highlight.FillColor = isVis and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
    end
-
-   UpdatePlayerCount()
 end
 
 local function ToggleESP(state)
    ESPEnabled = state
    if state then
-      CreatePlayerCount()
-      RunService:BindToRenderStep("SpectrESPUpdate", Enum.RenderPriority.Camera.Value + 5, UpdateESP)
+      if not PlayerCountText then
+         local sg = Instance.new("ScreenGui")
+         sg.ResetOnSpawn = false
+         sg.Parent = LocalPlayer:WaitForChild("PlayerGui")
+         PlayerCountText = Instance.new("TextLabel")
+         PlayerCountText.Size = UDim2.new(0, 280, 0, 40)
+         PlayerCountText.Position = UDim2.new(0.5, -140, 0, 15)
+         PlayerCountText.BackgroundTransparency = 0.6
+         PlayerCountText.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+         PlayerCountText.TextColor3 = Color3.fromRGB(255, 255, 255)
+         PlayerCountText.TextStrokeTransparency = 0
+         PlayerCountText.Font = Enum.Font.GothamBold
+         PlayerCountText.TextSize = 16
+         PlayerCountText.Text = "Players in ESP: 0"
+         PlayerCountText.Parent = sg
+      end
+      RunService:BindToRenderStep("SpectrESP", Enum.RenderPriority.Camera.Value + 5, UpdateESP)
    else
-      RunService:UnbindFromRenderStep("SpectrESPUpdate")
+      RunService:UnbindFromRenderStep("SpectrESP")
       for _, hl in pairs(Highlights) do if hl then hl:Destroy() end end
-      for _, label in pairs(NameLabels) do if label then label:Destroy() end end
+      for _, lbl in pairs(NameLabels) do if lbl then lbl:Destroy() end end
       Highlights = {}
       NameLabels = {}
-      if PlayerCountText and PlayerCountText.Parent then
-         PlayerCountText.Parent:Destroy()
-         PlayerCountText = nil
-      end
+      if PlayerCountText then PlayerCountText.Parent:Destroy() PlayerCountText = nil end
    end
 end
-
--- ================== AUTO TAPPER ==================
-local AutoTapEnabled = false
-local TapSpeed = 0.05
-local TapConnection
 
 local function StartAutoTapper()
    if TapConnection then return end
    TapConnection = RunService.Heartbeat:Connect(function()
-      if not AutoTapEnabled then return end
-      if not UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then return end
-      
+      if not AutoTapEnabled or not UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then return end
       VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Q, false, game)
       task.wait(TapSpeed)
       VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Q, false, game)
@@ -191,49 +167,22 @@ local function StartAutoTapper()
 end
 
 local function StopAutoTapper()
-   if TapConnection then
-      TapConnection:Disconnect()
-      TapConnection = nil
-   end
+   if TapConnection then TapConnection:Disconnect() TapConnection = nil end
 end
 
--- ================== AIMBOT + FOV CIRCLE ==================
-local FOVCircle = Drawing.new("Circle")
-FOVCircle.Thickness = 2
-FOVCircle.NumSides = 64
-FOVCircle.Color = Color3.fromRGB(255, 255, 255)
-FOVCircle.Transparency = 0.7
-FOVCircle.Filled = false
-FOVCircle.Visible = false
-
-local AimbotEnabled = false
-local AimFOV = 150
-local Smoothing = 0.2
-local AimPart = "Head"
-
 local function UpdateFOVCircle()
-   local centerX = Camera.ViewportSize.X / 2
-   local centerY = Camera.ViewportSize.Y / 2
-   FOVCircle.Position = Vector2.new(centerX, centerY)
+   FOVCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
    FOVCircle.Radius = AimFOV
 end
 
 local function GetClosestPlayer()
    local closest, shortest = nil, math.huge
-   
    for _, plr in ipairs(Players:GetPlayers()) do
       if plr == LocalPlayer or not plr.Character then continue end
-      
-      local character = plr.Character
-      local aimPartInstance = character:FindFirstChild(AimPart)
-      
-      if not aimPartInstance or IsAtSpawn(character) then
-         continue
-      end
-      
-      local pos = aimPartInstance.Position
-      local screen, onScreen = Camera:WorldToScreenPoint(pos)
-      
+      local char = plr.Character
+      local part = char:FindFirstChild(AimPart)
+      if not part or IsAtSpawn(char) then continue end
+      local screen, onScreen = Camera:WorldToScreenPoint(part.Position)
       if onScreen then
          local dist = (Vector2.new(screen.X, screen.Y) - Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)).Magnitude
          if dist < AimFOV and dist < shortest then
@@ -242,22 +191,18 @@ local function GetClosestPlayer()
          end
       end
    end
-   
    return closest
 end
 
-local AimbotConnection
 local function StartAimbot()
    if AimbotConnection then return end
    AimbotConnection = RunService.RenderStepped:Connect(function()
       UpdateFOVCircle()
       if not AimbotEnabled then return end
-      
       local target = GetClosestPlayer()
       if target and target.Character and target.Character:FindFirstChild(AimPart) then
          local targetPos = target.Character[AimPart].Position
-         local current = Camera.CFrame
-         Camera.CFrame = current:Lerp(CFrame.new(current.Position, targetPos), Smoothing)
+         Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(Camera.CFrame.Position, targetPos), Smoothing)
       end
    end)
 end
@@ -268,119 +213,367 @@ local function StopAimbot()
    FOVCircle.Visible = false
 end
 
--- ================== UI ==================
--- ESP Tab
-ESPTab:CreateToggle({
-   Name = "ESP",
-   CurrentValue = false,
-   Callback = function(Value)
-      ToggleESP(Value)
-   end,
-})
+-- ================== DARK MODERN UI ==================
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
-ESPTab:CreateSlider({
-   Name = "Spawn Exclusion Radius",
-   Range = {10, 200},
-   Increment = 5,
-   CurrentValue = 60,
-   Callback = function(Value)
-      SpawnExclusionDistance = Value
-   end,
-})
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 720, 0, 520)
+MainFrame.Position = UDim2.new(0.5, -360, 0.5, -260)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 22)
+MainFrame.BorderSizePixel = 0
+MainFrame.Parent = ScreenGui
 
-ESPTab:CreateColorPicker({
-   Name = "Highlight Color",
-   Color = Color3.fromRGB(255, 0, 0),
-   Callback = function(Value)
-      for _, hl in pairs(Highlights) do
-         if hl.FillColor ~= Color3.fromRGB(0, 255, 0) then
-            hl.FillColor = Value
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
+
+-- Title Bar
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 60)
+TitleBar.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
+TitleBar.Parent = MainFrame
+Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 12)
+
+-- Logo in Title
+local TitleLogo = Instance.new("ImageLabel")
+TitleLogo.Size = UDim2.new(0, 46, 0, 46)
+TitleLogo.Position = UDim2.new(0, 16, 0, 7)
+TitleLogo.BackgroundTransparency = 1
+TitleLogo.Image = "rbxassetid://118374262825356"
+TitleLogo.ScaleType = Enum.ScaleType.Fit
+TitleLogo.Parent = TitleBar
+
+local TitleText = Instance.new("TextLabel")
+TitleText.Size = UDim2.new(1, -100, 1, 0)
+TitleText.Position = UDim2.new(0, 72, 0, 0)
+TitleText.BackgroundTransparency = 1
+TitleText.Text = "Spectr Script"
+TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleText.Font = Enum.Font.GothamBold
+TitleText.TextSize = 23
+TitleText.TextXAlignment = Enum.TextXAlignment.Left
+TitleText.Parent = TitleBar
+
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Size = UDim2.new(0, 36, 0, 36)
+MinimizeBtn.Position = UDim2.new(1, -80, 0, 12)
+MinimizeBtn.BackgroundTransparency = 1
+MinimizeBtn.Text = "–"
+MinimizeBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+MinimizeBtn.TextSize = 26
+MinimizeBtn.Font = Enum.Font.GothamBold
+MinimizeBtn.Parent = TitleBar
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 36, 0, 36)
+CloseBtn.Position = UDim2.new(1, -40, 0, 12)
+CloseBtn.BackgroundTransparency = 1
+CloseBtn.Text = "×"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
+CloseBtn.TextSize = 26
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.Parent = TitleBar
+
+-- Minimize to Logo
+local Logo = nil
+local function CreateMinimizeLogo()
+   if Logo then return end
+   Logo = Instance.new("ImageButton")
+   Logo.Size = UDim2.new(0, 90, 0, 55)
+   Logo.Position = UDim2.new(0, 30, 0, 30)
+   Logo.BackgroundTransparency = 1
+   Logo.Image = "rbxassetid://118374262825356"
+   Logo.ScaleType = Enum.ScaleType.Fit
+   Logo.Parent = ScreenGui
+
+   local dragging = false
+   local dragStart, startPos
+
+   Logo.InputBegan:Connect(function(input)
+      if input.UserInputType == Enum.UserInputType.MouseButton1 then
+         dragging = true
+         dragStart = input.Position
+         startPos = Logo.Position
+      end
+   end)
+
+   UserInputService.InputChanged:Connect(function(input)
+      if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+         local delta = input.Position - dragStart
+         Logo.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+      end
+   end)
+
+   UserInputService.InputEnded:Connect(function(input)
+      if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+   end)
+
+   Logo.MouseButton1Click:Connect(function()
+      MainFrame.Visible = true
+      Logo.Visible = false
+   end)
+end
+
+MinimizeBtn.MouseButton1Click:Connect(function()
+   MainFrame.Visible = false
+   CreateMinimizeLogo()
+   Logo.Visible = true
+end)
+
+CloseBtn.MouseButton1Click:Connect(function()
+   ScreenGui:Destroy()
+end)
+
+-- Draggable
+local dragging, dragInput, dragStartPos, startFramePos
+MainFrame.InputBegan:Connect(function(input)
+   if input.UserInputType == Enum.UserInputType.MouseButton1 then
+      dragging = true
+      dragStartPos = input.Position
+      startFramePos = MainFrame.Position
+   end
+end)
+MainFrame.InputChanged:Connect(function(input)
+   if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
+end)
+UserInputService.InputChanged:Connect(function(input)
+   if dragging and input == dragInput then
+      local delta = input.Position - dragStartPos
+      MainFrame.Position = UDim2.new(startFramePos.X.Scale, startFramePos.X.Offset + delta.X, startFramePos.Y.Scale, startFramePos.Y.Offset + delta.Y)
+   end
+end)
+UserInputService.InputEnded:Connect(function(input)
+   if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+end)
+
+-- Left Side (Features)
+local LeftFrame = Instance.new("Frame")
+LeftFrame.Size = UDim2.new(0.35, 0, 1, -80)
+LeftFrame.Position = UDim2.new(0, 15, 0, 70)
+LeftFrame.BackgroundTransparency = 1
+LeftFrame.Parent = MainFrame
+
+local LeftTitle = Instance.new("TextLabel")
+LeftTitle.Size = UDim2.new(1, 0, 0, 30)
+LeftTitle.BackgroundTransparency = 1
+LeftTitle.Text = "Features"
+LeftTitle.TextColor3 = Color3.fromRGB(180, 180, 180)
+LeftTitle.Font = Enum.Font.GothamBold
+LeftTitle.TextSize = 18
+LeftTitle.Parent = LeftFrame
+
+local LeftList = Instance.new("UIListLayout")
+LeftList.Padding = UDim.new(0, 8)
+LeftList.Parent = LeftFrame
+
+-- Divider
+local Divider = Instance.new("Frame")
+Divider.Size = UDim2.new(0, 1, 1, -90)
+Divider.Position = UDim2.new(0.39, 0, 0, 75)
+Divider.BackgroundColor3 = Color3.fromRGB(45, 45, 47)
+Divider.Parent = MainFrame
+
+-- Right Side (Settings)
+local RightFrame = Instance.new("Frame")
+RightFrame.Size = UDim2.new(0.58, 0, 1, -80)
+RightFrame.Position = UDim2.new(0.41, 0, 0, 70)
+RightFrame.BackgroundTransparency = 1
+RightFrame.Parent = MainFrame
+
+local RightTitle = Instance.new("TextLabel")
+RightTitle.Size = UDim2.new(1, 0, 0, 30)
+RightTitle.BackgroundTransparency = 1
+RightTitle.Text = "Settings"
+RightTitle.TextColor3 = Color3.fromRGB(180, 180, 180)
+RightTitle.Font = Enum.Font.GothamBold
+RightTitle.TextSize = 18
+RightTitle.Parent = RightFrame
+
+local RightList = Instance.new("UIListLayout")
+RightList.Padding = UDim.new(0, 10)
+RightList.Parent = RightFrame
+
+-- Toggle (dark style)
+local function AddToggle(parent, name, default, callback)
+   local frame = Instance.new("Frame")
+   frame.Size = UDim2.new(1, 0, 0, 52)
+   frame.BackgroundColor3 = Color3.fromRGB(28, 28, 30)
+   frame.Parent = parent
+   Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+
+   local label = Instance.new("TextLabel")
+   label.Size = UDim2.new(0.5, 0, 1, 0)
+   label.BackgroundTransparency = 1
+   label.Text = name
+   label.TextColor3 = Color3.fromRGB(220, 220, 220)
+   label.Font = Enum.Font.GothamSemibold
+   label.TextSize = 16
+   label.TextXAlignment = Enum.TextXAlignment.Left
+   label.Position = UDim2.new(0, 18, 0, 0)
+   label.Parent = frame
+
+   local btn = Instance.new("TextButton")
+   btn.Size = UDim2.new(0, 78, 0, 32)
+   btn.Position = UDim2.new(1, -88, 0.5, -16)
+   btn.BackgroundColor3 = default and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(55, 55, 60)
+   btn.Text = default and "ON" or "OFF"
+   btn.TextColor3 = default and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(200, 200, 200)
+   btn.Font = Enum.Font.GothamBold
+   btn.TextSize = 14
+   btn.Parent = frame
+   Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+
+   btn.MouseButton1Click:Connect(function()
+      default = not default
+      btn.BackgroundColor3 = default and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(55, 55, 60)
+      btn.TextColor3 = default and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(200, 200, 200)
+      btn.Text = default and "ON" or "OFF"
+      callback(default)
+   end)
+end
+
+-- Slider (dark style)
+local function AddSlider(parent, name, minVal, maxVal, default, increment, callback)
+   local frame = Instance.new("Frame")
+   frame.Size = UDim2.new(1, 0, 0, 68)
+   frame.BackgroundColor3 = Color3.fromRGB(28, 28, 30)
+   frame.Parent = parent
+   Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+
+   local label = Instance.new("TextLabel")
+   label.Size = UDim2.new(1, -30, 0, 22)
+   label.BackgroundTransparency = 1
+   label.Text = name .. ": " .. default
+   label.TextColor3 = Color3.fromRGB(220, 220, 220)
+   label.Font = Enum.Font.GothamSemibold
+   label.TextSize = 15
+   label.Position = UDim2.new(0, 18, 0, 8)
+   label.Parent = frame
+
+   local bar = Instance.new("Frame")
+   bar.Size = UDim2.new(1, -36, 0, 10)
+   bar.Position = UDim2.new(0, 18, 0, 42)
+   bar.BackgroundColor3 = Color3.fromRGB(45, 45, 48)
+   bar.Parent = frame
+   Instance.new("UICorner", bar).CornerRadius = UDim.new(1, 0)
+
+   local fill = Instance.new("Frame")
+   fill.Size = UDim2.new((default - minVal) / (maxVal - minVal), 0, 1, 0)
+   fill.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+   fill.Parent = bar
+   Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
+
+   local knob = Instance.new("TextButton")
+   knob.Size = UDim2.new(0, 18, 0, 18)
+   knob.Position = UDim2.new((default - minVal) / (maxVal - minVal), -9, 0.5, -9)
+   knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+   knob.Text = ""
+   knob.Parent = bar
+   Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
+
+   local value = default
+   local function update()
+      local percent = (value - minVal) / (maxVal - minVal)
+      fill.Size = UDim2.new(percent, 0, 1, 0)
+      knob.Position = UDim2.new(percent, -9, 0.5, -9)
+      label.Text = name .. ": " .. math.floor(value / increment) * increment
+   end
+   update()
+
+   local dragging = false
+   knob.MouseButton1Down:Connect(function() dragging = true end)
+
+   UserInputService.InputChanged:Connect(function(input)
+      if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+         local barPos = bar.AbsolutePosition.X
+         local barSize = bar.AbsoluteSize.X
+         local percent = math.clamp((input.Position.X - barPos) / barSize, 0, 1)
+         value = minVal + percent * (maxVal - minVal)
+         value = math.floor(value / increment) * increment
+         update()
+         callback(value)
+      end
+   end)
+
+   UserInputService.InputEnded:Connect(function(input)
+      if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+   end)
+end
+
+-- ================== BUILD UI ==================
+AddToggle(LeftFrame, "ESP", false, ToggleESP)
+AddToggle(LeftFrame, "Aimbot", false, function(v)
+   AimbotEnabled = v
+   if v then StartAimbot() FOVCircle.Visible = true else StopAimbot() end
+end)
+AddToggle(LeftFrame, "Auto Tapper", false, function(v)
+   AutoTapEnabled = v
+   if v then StartAutoTapper() else StopAutoTapper() end
+end)
+
+AddSlider(RightFrame, "Spawn Exclusion Radius", 10, 200, 60, 5, function(v) SpawnExclusionDistance = v end)
+AddSlider(RightFrame, "FOV Radius", 30, 500, 150, 5, function(v) AimFOV = v end)
+AddSlider(RightFrame, "Smoothing", 0.05, 1, 0.2, 0.05, function(v) Smoothing = v end)
+
+-- Aim Part
+local aimFrame = Instance.new("Frame")
+aimFrame.Size = UDim2.new(1, 0, 0, 68)
+aimFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 30)
+aimFrame.Parent = RightFrame
+Instance.new("UICorner", aimFrame).CornerRadius = UDim.new(0, 8)
+
+local aimLabel = Instance.new("TextLabel")
+aimLabel.Size = UDim2.new(1, 0, 0, 22)
+aimLabel.BackgroundTransparency = 1
+aimLabel.Text = "Aim Part"
+aimLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+aimLabel.Font = Enum.Font.GothamSemibold
+aimLabel.TextSize = 15
+aimLabel.Position = UDim2.new(0, 18, 0, 8)
+aimLabel.Parent = aimFrame
+
+local aimContainer = Instance.new("Frame")
+aimContainer.Size = UDim2.new(1, -36, 0, 30)
+aimContainer.Position = UDim2.new(0, 18, 0, 32)
+aimContainer.BackgroundTransparency = 1
+aimContainer.Parent = aimFrame
+
+local aimList = Instance.new("UIListLayout")
+aimList.FillDirection = Enum.FillDirection.Horizontal
+aimList.Padding = UDim.new(0, 6)
+aimList.Parent = aimContainer
+
+for _, part in ipairs({"Head", "UpperTorso", "LowerPart"}) do
+   local btn = Instance.new("TextButton")
+   btn.Size = UDim2.new(0, 124, 1, 0)
+   btn.BackgroundColor3 = (part == AimPart) and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(45, 45, 48)
+   btn.Text = part
+   btn.TextColor3 = (part == AimPart) and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(200, 200, 200)
+   btn.Font = Enum.Font.Gotham
+   btn.TextSize = 14
+   btn.Parent = aimContainer
+   Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+
+   btn.MouseButton1Click:Connect(function()
+      AimPart = part
+      for _, b in ipairs(aimContainer:GetChildren()) do
+         if b:IsA("TextButton") then
+            b.BackgroundColor3 = (b.Text == part) and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(45, 45, 48)
+            b.TextColor3 = (b.Text == part) and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(200, 200, 200)
          end
       end
-   end,
-})
+   end)
+end
 
--- Aimbot Tab
-AimbotTab:CreateToggle({
-   Name = "Aimbot Toggle",
-   CurrentValue = false,
-   Callback = function(Value)
-      AimbotEnabled = Value
-      if Value then
-         StartAimbot()
-         FOVCircle.Visible = true
-      else
-         StopAimbot()
-      end
-   end,
-})
+AddSlider(RightFrame, "Tap Speed", 0.01, 0.15, 0.05, 0.01, function(v) TapSpeed = v end)
 
-AimbotTab:CreateSlider({
-   Name = "FOV Radius",
-   Range = {30, 500},
-   Increment = 5,
-   CurrentValue = 150,
-   Callback = function(Value) AimFOV = Value end,
-})
-
-AimbotTab:CreateSlider({
-   Name = "Smoothing",
-   Range = {0.05, 1},
-   Increment = 0.05,
-   CurrentValue = 0.2,
-   Callback = function(Value) Smoothing = Value end,
-})
-
-AimbotTab:CreateDropdown({
-   Name = "Aim Part",
-   Options = {"Head", "UpperTorso", "HumanoidRootPart"},
-   CurrentOption = {"Head"},
-   Callback = function(Option) AimPart = Option[1] end,
-})
-
-AimbotTab:CreateColorPicker({
-   Name = "FOV Circle Color",
-   Color = Color3.fromRGB(255, 255, 255),
-   Callback = function(Value) FOVCircle.Color = Value end,
-})
-
--- Combat Tab
-CombatTab:CreateToggle({
-   Name = "Auto Tapper (Hold LMB → Tap 1 & 3 Fast)",
-   CurrentValue = false,
-   Callback = function(Value)
-      AutoTapEnabled = Value
-      if Value then
-         StartAutoTapper()
-      else
-         StopAutoTapper()
-      end
-   end,
-})
-
-CombatTab:CreateSlider({
-   Name = "Tap Speed (Lower = Faster)",
-   Range = {0.01, 0.15},
-   Increment = 0.01,
-   CurrentValue = 0.05,
-   Callback = function(Value)
-      TapSpeed = Value
-   end,
-})
-
--- ================== AUTO SETUP ==================
-Players.PlayerAdded:Connect(function(player)
-   player.CharacterAdded:Connect(function(char)
-      if ESPEnabled and player ~= LocalPlayer then
-         CreateESPForCharacter(char, player)
-      end
+-- Auto Setup
+Players.PlayerAdded:Connect(function(plr)
+   plr.CharacterAdded:Connect(function(char)
+      if ESPEnabled then CreateESPForCharacter(char, plr) end
    end)
 end)
 
 UpdateFOVCircle()
 
-Rayfield:Notify({
-   Title = "Spectr Loaded",
-   Content = "Tracers removed!\nESP + Aimbot + Spawn exclusion working perfectly",
-   Duration = 8,
-})
+print("✅ Spectr Dark UI Loaded!")
