@@ -1,4 +1,4 @@
--- // Spectr Full Script - ESP + Adjustable Spawn Exclusion + Fixed Aimbot \\ --
+-- // Spectr Full Script - ESP + Adjustable Spawn Exclusion (No Tracers) \\ --
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local Window = Rayfield:CreateWindow({
    Name = "Spectr",
@@ -31,10 +31,9 @@ local function IsAtSpawn(character)
    return distance < SpawnExclusionDistance
 end
 
--- ================== ESP + NAMES + TRACERS + PLAYER COUNT ==================
+-- ================== ESP + NAMES + PLAYER COUNT ==================
 local Highlights = {}
 local NameLabels = {}
-local Tracers = {}
 local ESPEnabled = false
 local PlayerCountText = nil
 
@@ -115,13 +114,6 @@ local function CreateESPForCharacter(character, player)
       textLabel.Parent = billboard
       NameLabels[character] = billboard
    end
-
-   local tracer = Drawing.new("Line")
-   tracer.Thickness = 2
-   tracer.Color = Color3.fromRGB(255, 0, 0)
-   tracer.Transparency = 1
-   tracer.Visible = false
-   Tracers[character] = tracer
 end
 
 local function UpdateESP()
@@ -139,39 +131,21 @@ local function UpdateESP()
       if not character or not character.Parent or not character:FindFirstChild("HumanoidRootPart") then
          if highlight then highlight:Destroy() end
          if NameLabels[character] then NameLabels[character]:Destroy() end
-         if Tracers[character] then Tracers[character]:Remove() end
          Highlights[character] = nil
          NameLabels[character] = nil
-         Tracers[character] = nil
          continue
       end
 
       if IsAtSpawn(character) then
          if highlight then highlight:Destroy() end
          if NameLabels[character] then NameLabels[character]:Destroy() end
-         if Tracers[character] then Tracers[character]:Remove() end
          Highlights[character] = nil
          NameLabels[character] = nil
-         Tracers[character] = nil
          continue
       end
 
       local isVis = IsVisible(character)
       highlight.FillColor = isVis and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-
-      local tracer = Tracers[character]
-      if tracer and character:FindFirstChild("HumanoidRootPart") then
-         local rootPos = character.HumanoidRootPart.Position
-         local screenPos, onScreen = Camera:WorldToScreenPoint(rootPos)
-         if onScreen then
-            local bottomCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y - 10)
-            tracer.From = bottomCenter
-            tracer.To = Vector2.new(screenPos.X, screenPos.Y)
-            tracer.Visible = true
-         else
-            tracer.Visible = false
-         end
-      end
    end
 
    UpdatePlayerCount()
@@ -186,10 +160,8 @@ local function ToggleESP(state)
       RunService:UnbindFromRenderStep("SpectrESPUpdate")
       for _, hl in pairs(Highlights) do if hl then hl:Destroy() end end
       for _, label in pairs(NameLabels) do if label then label:Destroy() end end
-      for _, tracer in pairs(Tracers) do if tracer then tracer:Remove() end end
       Highlights = {}
       NameLabels = {}
-      Tracers = {}
       if PlayerCountText and PlayerCountText.Parent then
          PlayerCountText.Parent:Destroy()
          PlayerCountText = nil
@@ -328,28 +300,6 @@ ESPTab:CreateColorPicker({
    end,
 })
 
-ESPTab:CreateColorPicker({
-   Name = "Tracer Color",
-   Color = Color3.fromRGB(255, 0, 0),
-   Callback = function(Value)
-      for _, tracer in pairs(Tracers) do
-         if tracer then tracer.Color = Value end
-      end
-   end,
-})
-
-ESPTab:CreateSlider({
-   Name = "Tracer Thickness",
-   Range = {1, 5},
-   Increment = 0.5,
-   CurrentValue = 2,
-   Callback = function(Value)
-      for _, tracer in pairs(Tracers) do
-         if tracer then tracer.Thickness = Value end
-      end
-   end,
-})
-
 -- Aimbot Tab
 AimbotTab:CreateToggle({
    Name = "Aimbot Toggle",
@@ -431,6 +381,6 @@ UpdateFOVCircle()
 
 Rayfield:Notify({
    Title = "Spectr Loaded",
-   Content = "Full Fix Applied!\nESP + Tracers + Aimbot spawn avoidance working perfectly",
+   Content = "Tracers removed!\nESP + Aimbot + Spawn exclusion working perfectly",
    Duration = 8,
 })
