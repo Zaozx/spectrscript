@@ -1,9 +1,10 @@
+-- // Spectr Full Script - ESP + Tracers + Aimbot + Auto Tapper (Spawn Excluded) \\ --
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
    Name = "Spectr",
-   LoadingTitle = "Spectr Script",
-   LoadingSubtitle = "by Spectr",
+   LoadingTitle = "Spectr Full Pack",
+   LoadingSubtitle = "by Grok",
    ConfigurationSaving = { Enabled = false },
 })
 
@@ -20,14 +21,14 @@ local UserInputService = game:GetService("UserInputService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 
 -- ================== SPAWN EXCLUSION ==================
-local SpawnCFrame = CFrame.new(0, 497.5, 4000)  -- Your spawn world pivot
-local SpawnExclusionDistance = 50  -- How close to spawn is considered "at spawn" (you can change this)
+local SpawnPosition = Vector3.new(0, 497.5, 4000)  -- Your spawn location
+local SpawnExclusionDistance = 60  -- Studs (increase if needed)
 
 local function IsAtSpawn(character)
-   if not character or not character:FindFirstChild("HumanoidRootPart") then return false end
-   local rootPos = character.HumanoidRootPart.Position
-   local spawnPos = SpawnCFrame.Position
-   local distance = (rootPos - spawnPos).Magnitude
+   if not character or not character:FindFirstChild("HumanoidRootPart") then 
+      return false 
+   end
+   local distance = (character.HumanoidRootPart.Position - SpawnPosition).Magnitude
    return distance < SpawnExclusionDistance
 end
 
@@ -80,7 +81,7 @@ end
 
 local function CreateESPForCharacter(character, player)
    if not character or Highlights[character] then return end
-   if IsAtSpawn(character) then return end  -- ← Skip if at spawn
+   if IsAtSpawn(character) then return end  -- Skip spawn
 
    task.wait(0.15)
 
@@ -91,7 +92,7 @@ local function CreateESPForCharacter(character, player)
    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
    highlight.FillTransparency = 0.4
    highlight.OutlineTransparency = 0
-   highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+   highlight.DepthMode = Enum.HighlightDepthMode.Occluded
    highlight.Adornee = character
    highlight.Parent = character
    Highlights[character] = highlight
@@ -131,15 +132,15 @@ end
 
 local function UpdateESP()
    for character, highlight in pairs(Highlights) do
-      if IsAtSpawn(character) then 
-         -- Clean up if somehow spawned near spawn
+      if IsAtSpawn(character) then
+         -- Cleanup if player returns to spawn
          if highlight then highlight:Destroy() end
          if NameLabels[character] then NameLabels[character]:Destroy() end
          if Tracers[character] then Tracers[character]:Remove() end
          Highlights[character] = nil
          NameLabels[character] = nil
          Tracers[character] = nil
-         continue 
+         continue
       end
 
       local player = character.Parent
@@ -148,6 +149,7 @@ local function UpdateESP()
       local isVis = IsVisible(character)
       highlight.FillColor = isVis and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 
+      -- Update Tracer
       local tracer = Tracers[character]
       if tracer and character:FindFirstChild("HumanoidRootPart") then
          local rootPos = character.HumanoidRootPart.Position
@@ -190,7 +192,7 @@ local function ToggleESP(state)
    end
 end
 
--- ================== AUTO TAPPER (unchanged) ==================
+-- ================== AUTO TAPPER ==================
 local AutoTapEnabled = false
 local TapSpeed = 0.05
 
@@ -221,7 +223,7 @@ local function StopAutoTapper()
    end
 end
 
--- ================== AIMBOT + FOV CIRCLE (unchanged) ==================
+-- ================== AIMBOT + FOV CIRCLE ==================
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Thickness = 2
 FOVCircle.NumSides = 64
@@ -281,8 +283,7 @@ local function StopAimbot()
    FOVCircle.Visible = false
 end
 
--- ================== UI SETUP ==================
-
+-- ================== UI ==================
 -- ESP Tab
 ESPTab:CreateToggle({
    Name = "ESP + Names + Tracers Toggle",
@@ -346,9 +347,7 @@ AimbotTab:CreateSlider({
    Range = {30, 500},
    Increment = 5,
    CurrentValue = 150,
-   Callback = function(Value)
-      AimFOV = Value
-   end,
+   Callback = function(Value) AimFOV = Value end,
 })
 
 AimbotTab:CreateSlider({
@@ -372,7 +371,7 @@ AimbotTab:CreateColorPicker({
    Callback = function(Value) FOVCircle.Color = Value end,
 })
 
--- Combat Tab (Auto Tapper)
+-- Combat Tab - Auto Tapper
 CombatTab:CreateToggle({
    Name = "Auto Tapper (Hold LMB → Tap 1 & 3 Fast)",
    CurrentValue = false,
@@ -396,12 +395,12 @@ CombatTab:CreateSlider({
    end,
 })
 
-CombatTab:CreateSection("How to use: Turn ON → Hold Left Mouse Button")
+CombatTab:CreateSection("Tip: Hold Left Mouse Button while Auto Tapper is ON")
 
--- Auto setup for new players
+-- ================== AUTO PLAYER SETUP ==================
 Players.PlayerAdded:Connect(function(player)
    player.CharacterAdded:Connect(function(char)
-      if ESPEnabled then
+      if ESPEnabled and player ~= LocalPlayer then
          CreateESPForCharacter(char, player)
       end
    end)
@@ -416,7 +415,7 @@ end
 UpdateFOVCircle()
 
 Rayfield:Notify({
-   Title = "Spectr Loaded Successfully",
-   Content = "All features active:\n• ESP + Names + Tracers\n• Auto Tapper (Hold LMB)\n• Aimbot + FOV Circle",
+   Title = "Spectr Loaded",
+   Content = "Spawn excluded!\nPosition: (0, 497.5, 4000)\nExclusion radius: 60 studs",
    Duration = 8,
 })
