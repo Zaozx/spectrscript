@@ -13,7 +13,7 @@ end
 -------------------------------------------------------------------------------
 print(ProtectionConfig.HubName .. " Loaded Successfully!")
 
--- // Spectr - Dark Modern UI + Distance + Box ESP + ESP Settings \\ --
+-- // Spectr - Final Version with Distance + ESP Settings \\ --
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
@@ -27,7 +27,6 @@ local SpawnExclusionDistance = 60
 
 local Highlights = {}
 local NameLabels = {}
-local Boxes = {}
 
 local ESPEnabled = false
 local PlayerCountText = nil
@@ -35,7 +34,6 @@ local PlayerCountText = nil
 -- ESP Settings
 local ShowNames = true
 local ShowHighlight = true
-local ShowBox = true
 
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Thickness = 2
@@ -117,18 +115,6 @@ local function CreateESPForCharacter(character, player)
          NameLabels[character] = billboard
       end
    end
-
-   if ShowBox then
-      local box = {}
-      for i = 1, 4 do
-         local line = Drawing.new("Line")
-         line.Thickness = 2
-         line.Color = Color3.fromRGB(255, 255, 255)
-         line.Transparency = 1
-         box[i] = line
-      end
-      Boxes[character] = box
-   end
 end
 
 local function UpdateESP()
@@ -144,24 +130,16 @@ local function UpdateESP()
       if not character or not character.Parent or not character:FindFirstChild("HumanoidRootPart") then
          if highlight then highlight:Destroy() end
          if NameLabels[character] then NameLabels[character]:Destroy() end
-         if Boxes[character] then
-            for _, line in pairs(Boxes[character]) do line:Remove() end
-         end
          Highlights[character] = nil
          NameLabels[character] = nil
-         Boxes[character] = nil
          continue
       end
 
       if IsAtSpawn(character) then
          if highlight then highlight:Destroy() end
          if NameLabels[character] then NameLabels[character]:Destroy() end
-         if Boxes[character] then
-            for _, line in pairs(Boxes[character]) do line:Remove() end
-         end
          Highlights[character] = nil
          NameLabels[character] = nil
-         Boxes[character] = nil
          continue
       end
 
@@ -179,27 +157,6 @@ local function UpdateESP()
             if textLabel then
                textLabel.Text = player.Name .. " [" .. distance .. "]"
             end
-         end
-      end
-
-      if Boxes[character] then
-         local root = character:FindFirstChild("HumanoidRootPart")
-         if root then
-            local size = character:GetExtentsSize() * 1.1
-            local top = Camera:WorldToScreenPoint(root.Position + Vector3.new(0, size.Y/2, 0))
-            local bottom = Camera:WorldToScreenPoint(root.Position - Vector3.new(0, size.Y/2, 0))
-            local left = Camera:WorldToScreenPoint(root.Position - Vector3.new(size.X/2, 0, 0))
-            local right = Camera:WorldToScreenPoint(root.Position + Vector3.new(size.X/2, 0, 0))
-
-            local box = Boxes[character]
-            box[1].From = Vector2.new(top.X, top.Y)      box[1].To = Vector2.new(right.X, top.Y)
-            box[2].From = Vector2.new(right.X, top.Y)    box[2].To = Vector2.new(right.X, bottom.Y)
-            box[3].From = Vector2.new(right.X, bottom.Y) box[3].To = Vector2.new(left.X, bottom.Y)
-            box[4].From = Vector2.new(left.X, bottom.Y)  box[4].To = Vector2.new(left.X, top.Y)
-
-            for _, line in pairs(box) do line.Visible = true end
-         else
-            for _, line in pairs(Boxes[character]) do line.Visible = false end
          end
       end
    end
@@ -229,12 +186,8 @@ local function ToggleESP(state)
       RunService:UnbindFromRenderStep("SpectrESP")
       for _, hl in pairs(Highlights) do if hl then hl:Destroy() end end
       for _, lbl in pairs(NameLabels) do if lbl then lbl:Destroy() end end
-      for _, box in pairs(Boxes) do
-         for _, line in pairs(box) do line:Remove() end
-      end
       Highlights = {}
       NameLabels = {}
-      Boxes = {}
       if PlayerCountText then PlayerCountText.Parent:Destroy() PlayerCountText = nil end
    end
 end
@@ -299,7 +252,7 @@ CloseBtn.TextSize = 26
 CloseBtn.Font = Enum.Font.GothamBold
 CloseBtn.Parent = TitleBar
 
--- Minimized Logo (smaller)
+-- Minimized Logo (small)
 local Logo = nil
 local function CreateMinimizeLogo()
    if Logo then return end
@@ -371,7 +324,7 @@ UserInputService.InputEnded:Connect(function(input)
    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
 end)
 
--- Left Side
+-- Left Side (Features)
 local LeftFrame = Instance.new("Frame")
 LeftFrame.Size = UDim2.new(0.38, 0, 1, -80)
 LeftFrame.Position = UDim2.new(0, 15, 0, 70)
@@ -398,7 +351,7 @@ Divider.Position = UDim2.new(0.39, 0, 0, 75)
 Divider.BackgroundColor3 = Color3.fromRGB(45, 45, 47)
 Divider.Parent = MainFrame
 
--- Right Side
+-- Right Side (Settings)
 local RightFrame = Instance.new("Frame")
 RightFrame.Size = UDim2.new(0.58, 0, 1, -80)
 RightFrame.Position = UDim2.new(0.41, 0, 0, 70)
@@ -529,7 +482,21 @@ end
 AddToggle(LeftFrame, "ESP", false, ToggleESP)
 AddToggle(LeftFrame, "Names", true, function(v) ShowNames = v end)
 AddToggle(LeftFrame, "Highlight", true, function(v) ShowHighlight = v end)
-AddToggle(LeftFrame, "Box ESP", true, function(v) ShowBox = v end)
+
+AddToggle(LeftFrame, "Aimbot", false, function(v)
+   AimbotEnabled = v
+   if v then 
+      StartAimbot()
+      FOVCircle.Visible = true
+   else 
+      StopAimbot()
+   end
+end)
+
+AddToggle(LeftFrame, "Auto Tapper", false, function(v)
+   AutoTapEnabled = v
+   if v then StartAutoTapper() else StopAutoTapper() end
+end)
 
 AddSlider(RightFrame, "Spawn Exclusion Radius", 10, 200, 60, 5, function(v) SpawnExclusionDistance = v end)
 AddSlider(RightFrame, "FOV Radius", 30, 500, 150, 5, function(v) AimFOV = v end)
@@ -595,4 +562,4 @@ Players.PlayerAdded:Connect(function(plr)
 end)
 
 UpdateFOVCircle()
-print("✅ Spectr Loaded with Distance, Box ESP, and ESP Settings!")
+print("✅ Spectr Loaded with Distance in Names + ESP Settings!")
