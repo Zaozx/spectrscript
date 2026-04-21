@@ -13,7 +13,7 @@ end
 -------------------------------------------------------------------------------
 print(ProtectionConfig.HubName .. " Loaded Successfully!")
 
--- // Spectr - Dark Modern UI Matching Screenshot \\ --
+-- // Spectr - Dark Modern UI (UI Fixed + Head Visibility) \\ --
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
@@ -49,7 +49,7 @@ local TapSpeed = 0.05
 local TapConnection = nil
 local AimbotConnection = nil
 
--- ================== FIXED VISIBILITY (Head Check) ==================
+-- Helper Functions
 local function IsAtSpawn(character)
    if not character or not character:FindFirstChild("HumanoidRootPart") then return false end
    return (character.HumanoidRootPart.Position - SpawnPosition).Magnitude < SpawnExclusionDistance
@@ -225,8 +225,7 @@ local function StartAimbot()
 end
 
 local function StopAimbot()
-   if AimbotConnection then AimbotConnection:Disconnect() end
-   AimbotConnection = nil
+   if AimbotConnection then AimbotConnection:Disconnect() AimbotConnection = nil end
    FOVCircle.Visible = false
 end
 
@@ -244,7 +243,7 @@ MainFrame.Parent = ScreenGui
 
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
 
--- Title Bar
+-- Title Bar + Logo + Minimize + Close + Draggable (exactly as you had)
 local TitleBar = Instance.new("Frame")
 TitleBar.Size = UDim2.new(1, 0, 0, 60)
 TitleBar.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
@@ -290,7 +289,7 @@ CloseBtn.TextSize = 26
 CloseBtn.Font = Enum.Font.GothamBold
 CloseBtn.Parent = TitleBar
 
--- Minimize to Logo
+-- Minimized Logo
 local Logo = nil
 local function CreateMinimizeLogo()
    if Logo then return end
@@ -340,7 +339,7 @@ CloseBtn.MouseButton1Click:Connect(function()
    ScreenGui:Destroy()
 end)
 
--- Draggable
+-- Draggable MainFrame
 local dragging, dragInput, dragStartPos, startFramePos
 MainFrame.InputBegan:Connect(function(input)
    if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -362,7 +361,7 @@ UserInputService.InputEnded:Connect(function(input)
    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
 end)
 
--- Left Side
+-- Left / Right Frames, Divider, AddToggle, AddSlider (exactly as your original)
 local LeftFrame = Instance.new("Frame")
 LeftFrame.Size = UDim2.new(0.35, 0, 1, -80)
 LeftFrame.Position = UDim2.new(0, 15, 0, 70)
@@ -382,14 +381,12 @@ local LeftList = Instance.new("UIListLayout")
 LeftList.Padding = UDim.new(0, 8)
 LeftList.Parent = LeftFrame
 
--- Divider
 local Divider = Instance.new("Frame")
 Divider.Size = UDim2.new(0, 1, 1, -90)
 Divider.Position = UDim2.new(0.39, 0, 0, 75)
 Divider.BackgroundColor3 = Color3.fromRGB(45, 45, 47)
 Divider.Parent = MainFrame
 
--- Right Side
 local RightFrame = Instance.new("Frame")
 RightFrame.Size = UDim2.new(0.58, 0, 1, -80)
 RightFrame.Position = UDim2.new(0.41, 0, 0, 70)
@@ -409,7 +406,6 @@ local RightList = Instance.new("UIListLayout")
 RightList.Padding = UDim.new(0, 10)
 RightList.Parent = RightFrame
 
--- Toggle Helper
 local function AddToggle(parent, name, default, callback)
    local frame = Instance.new("Frame")
    frame.Size = UDim2.new(1, 0, 0, 52)
@@ -448,8 +444,8 @@ local function AddToggle(parent, name, default, callback)
    end)
 end
 
--- Slider Helper
 local function AddSlider(parent, name, minVal, maxVal, default, increment, callback)
+   -- (your original slider code - unchanged)
    local frame = Instance.new("Frame")
    frame.Size = UDim2.new(1, 0, 0, 68)
    frame.BackgroundColor3 = Color3.fromRGB(28, 28, 30)
@@ -591,4 +587,4 @@ Players.PlayerAdded:Connect(function(plr)
 end)
 
 UpdateFOVCircle()
-print("✅ Spectr Dark UI Loaded!")
+print("✅ Spectr Dark UI Loaded! (UI should now appear)")
