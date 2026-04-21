@@ -1,10 +1,9 @@
--- // Spectr Full Script - ESP + Tracers + Aimbot + Auto Tapper \\ --
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
    Name = "Spectr",
-   LoadingTitle = "Spectr Script On Top",
-   LoadingSubtitle = "by ur Mom",
+   LoadingTitle = "Spectr Script",
+   LoadingSubtitle = "by Spectr",
    ConfigurationSaving = { Enabled = false },
 })
 
@@ -19,6 +18,18 @@ local Camera = workspace.CurrentCamera
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
+
+-- ================== SPAWN EXCLUSION ==================
+local SpawnCFrame = CFrame.new(0, 497.5, 4000)  -- Your spawn world pivot
+local SpawnExclusionDistance = 50  -- How close to spawn is considered "at spawn" (you can change this)
+
+local function IsAtSpawn(character)
+   if not character or not character:FindFirstChild("HumanoidRootPart") then return false end
+   local rootPos = character.HumanoidRootPart.Position
+   local spawnPos = SpawnCFrame.Position
+   local distance = (rootPos - spawnPos).Magnitude
+   return distance < SpawnExclusionDistance
+end
 
 -- ================== ESP + NAMES + TRACERS + PLAYER COUNT ==================
 local Highlights = {}
@@ -69,6 +80,8 @@ end
 
 local function CreateESPForCharacter(character, player)
    if not character or Highlights[character] then return end
+   if IsAtSpawn(character) then return end  -- ← Skip if at spawn
+
    task.wait(0.15)
 
    -- Full Body Highlight
@@ -78,7 +91,7 @@ local function CreateESPForCharacter(character, player)
    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
    highlight.FillTransparency = 0.4
    highlight.OutlineTransparency = 0
-   highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+   highlight.DepthMode = Enum.HighlightDepthMode.Occluded
    highlight.Adornee = character
    highlight.Parent = character
    Highlights[character] = highlight
@@ -118,13 +131,23 @@ end
 
 local function UpdateESP()
    for character, highlight in pairs(Highlights) do
+      if IsAtSpawn(character) then 
+         -- Clean up if somehow spawned near spawn
+         if highlight then highlight:Destroy() end
+         if NameLabels[character] then NameLabels[character]:Destroy() end
+         if Tracers[character] then Tracers[character]:Remove() end
+         Highlights[character] = nil
+         NameLabels[character] = nil
+         Tracers[character] = nil
+         continue 
+      end
+
       local player = character.Parent
       if not player or not player:IsA("Player") then continue end
 
       local isVis = IsVisible(character)
       highlight.FillColor = isVis and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 
-      -- Tracer Update
       local tracer = Tracers[character]
       if tracer and character:FindFirstChild("HumanoidRootPart") then
          local rootPos = character.HumanoidRootPart.Position
@@ -167,7 +190,7 @@ local function ToggleESP(state)
    end
 end
 
--- ================== AUTO TAPPER ==================
+-- ================== AUTO TAPPER (unchanged) ==================
 local AutoTapEnabled = false
 local TapSpeed = 0.05
 
@@ -179,17 +202,15 @@ local function StartAutoTapper()
       if not AutoTapEnabled then return end
       if not UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then return end
 
-      -- Tap 1
-      VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Q, false, game)
-      task.wait(TapSpeed)
-      VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Q, false, game)
-
-      task.wait(TapSpeed)
-
-      -- Tap 3
       VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.One, false, game)
       task.wait(TapSpeed)
       VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.One, false, game)
+
+      task.wait(TapSpeed)
+
+      VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Three, false, game)
+      task.wait(TapSpeed)
+      VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Three, false, game)
    end)
 end
 
@@ -200,7 +221,7 @@ local function StopAutoTapper()
    end
 end
 
--- ================== AIMBOT + FOV CIRCLE ==================
+-- ================== AIMBOT + FOV CIRCLE (unchanged) ==================
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Thickness = 2
 FOVCircle.NumSides = 64
@@ -224,7 +245,7 @@ end
 local function GetClosestPlayer()
    local closest, shortest = nil, math.huge
    for _, plr in ipairs(Players:GetPlayers()) do
-      if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild(AimPart) then
+      if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild(AimPart) and not IsAtSpawn(plr.Character) then
          local pos = plr.Character[AimPart].Position
          local screen, onScreen = Camera:WorldToScreenPoint(pos)
          if onScreen then
