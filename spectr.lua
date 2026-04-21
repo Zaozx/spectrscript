@@ -1,9 +1,9 @@
--- // Spectr Full Script - ESP + Tracers + Aimbot + Auto Tapper (Spawn Excluded) \\ --
+-- // Spectr Full Script - ESP + Adjustable Spawn Exclusion \\ --
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
    Name = "Spectr",
-   LoadingTitle = "Spectr Script",
+   LoadingTitle = "Spectr Script (Sniper Arena)",
    LoadingSubtitle = "by Spectr",
    ConfigurationSaving = { Enabled = false },
 })
@@ -20,9 +20,9 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 
--- ================== SPAWN EXCLUSION ==================
-local SpawnPosition = Vector3.new(0, 497.5, 4000)  -- Your spawn location
-local SpawnExclusionDistance = 60  -- Studs (increase if needed)
+-- ================== SPAWN EXCLUSION (Adjustable) ==================
+local SpawnPosition = Vector3.new(0, 497.5, 4000)
+local SpawnExclusionDistance = 60  -- Default value, will be controlled by slider
 
 local function IsAtSpawn(character)
    if not character or not character:FindFirstChild("HumanoidRootPart") then 
@@ -81,11 +81,10 @@ end
 
 local function CreateESPForCharacter(character, player)
    if not character or Highlights[character] then return end
-   if IsAtSpawn(character) then return end  -- Skip spawn
+   if IsAtSpawn(character) then return end
 
    task.wait(0.15)
 
-   -- Full Body Highlight
    local highlight = Instance.new("Highlight")
    highlight.Name = "SpectrHighlight"
    highlight.FillColor = Color3.fromRGB(255, 0, 0)
@@ -97,7 +96,6 @@ local function CreateESPForCharacter(character, player)
    highlight.Parent = character
    Highlights[character] = highlight
 
-   -- Name above head
    local head = character:FindFirstChild("Head")
    if head then
       local billboard = Instance.new("BillboardGui")
@@ -121,7 +119,6 @@ local function CreateESPForCharacter(character, player)
       NameLabels[character] = billboard
    end
 
-   -- Red Tracer
    local tracer = Drawing.new("Line")
    tracer.Thickness = 2
    tracer.Color = Color3.fromRGB(255, 0, 0)
@@ -133,7 +130,6 @@ end
 local function UpdateESP()
    for character, highlight in pairs(Highlights) do
       if IsAtSpawn(character) then
-         -- Cleanup if player returns to spawn
          if highlight then highlight:Destroy() end
          if NameLabels[character] then NameLabels[character]:Destroy() end
          if Tracers[character] then Tracers[character]:Remove() end
@@ -149,7 +145,6 @@ local function UpdateESP()
       local isVis = IsVisible(character)
       highlight.FillColor = isVis and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 
-      -- Update Tracer
       local tracer = Tracers[character]
       if tracer and character:FindFirstChild("HumanoidRootPart") then
          local rootPos = character.HumanoidRootPart.Position
@@ -286,15 +281,25 @@ end
 -- ================== UI ==================
 -- ESP Tab
 ESPTab:CreateToggle({
-   Name = "ESP + Names + Tracers Toggle",
+   Name = "ESP",
    CurrentValue = false,
    Callback = function(Value)
       ToggleESP(Value)
    end,
 })
 
+ESPTab:CreateSlider({
+   Name = "Spawn Exclusion Radius",
+   Range = {10, 200},
+   Increment = 5,
+   CurrentValue = 60,
+   Callback = function(Value)
+      SpawnExclusionDistance = Value
+   end,
+})
+
 ESPTab:CreateColorPicker({
-   Name = "Behind Wall Highlight Color",
+   Name = "Highlight Color",
    Color = Color3.fromRGB(255, 0, 0),
    Callback = function(Value)
       for _, hl in pairs(Highlights) do
@@ -371,7 +376,7 @@ AimbotTab:CreateColorPicker({
    Callback = function(Value) FOVCircle.Color = Value end,
 })
 
--- Combat Tab - Auto Tapper
+-- Combat Tab
 CombatTab:CreateToggle({
    Name = "Auto Tapper (Hold LMB → Tap 1 & 3 Fast)",
    CurrentValue = false,
@@ -395,9 +400,7 @@ CombatTab:CreateSlider({
    end,
 })
 
-CombatTab:CreateSection("Tip: Hold Left Mouse Button while Auto Tapper is ON")
-
--- ================== AUTO PLAYER SETUP ==================
+-- ================== AUTO SETUP ==================
 Players.PlayerAdded:Connect(function(player)
    player.CharacterAdded:Connect(function(char)
       if ESPEnabled and player ~= LocalPlayer then
@@ -416,6 +419,6 @@ UpdateFOVCircle()
 
 Rayfield:Notify({
    Title = "Spectr Loaded",
-   Content = "Spawn excluded!\nPosition: (0, 497.5, 4000)\nExclusion radius: 60 studs",
+   Content = "Adjustable Spawn Exclusion Added!\nDefault radius: 60 studs\nYou can change it in ESP tab",
    Duration = 8,
 })
