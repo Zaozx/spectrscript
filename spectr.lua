@@ -202,15 +202,15 @@ local function StartAutoTapper()
       if not AutoTapEnabled then return end
       if not UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then return end
 
+      VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Q, false, game)
+      task.wait(TapSpeed)
+      VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Q, false, game)
+
+      task.wait(TapSpeed)
+
       VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.One, false, game)
       task.wait(TapSpeed)
       VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.One, false, game)
-
-      task.wait(TapSpeed)
-
-      VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Three, false, game)
-      task.wait(TapSpeed)
-      VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Three, false, game)
    end)
 end
 
