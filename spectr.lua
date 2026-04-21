@@ -1,6 +1,5 @@
--- // Spectr Full Script - ESP + Adjustable Spawn Exclusion \\ --
+-- // Spectr Full Script - ESP + Adjustable Spawn Exclusion + Fixed Aimbot \\ --
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
-
 local Window = Rayfield:CreateWindow({
    Name = "Spectr",
    LoadingTitle = "Spectr Script (Sniper Arena)",
@@ -22,11 +21,11 @@ local VirtualInputManager = game:GetService("VirtualInputManager")
 
 -- ================== SPAWN EXCLUSION (Adjustable) ==================
 local SpawnPosition = Vector3.new(0, 497.5, 4000)
-local SpawnExclusionDistance = 60  -- Default value, will be controlled by slider
+local SpawnExclusionDistance = 60
 
 local function IsAtSpawn(character)
-   if not character or not character:FindFirstChild("HumanoidRootPart") then 
-      return false 
+   if not character or not character:FindFirstChild("HumanoidRootPart") then
+      return false
    end
    local distance = (character.HumanoidRootPart.Position - SpawnPosition).Magnitude
    return distance < SpawnExclusionDistance
@@ -44,7 +43,7 @@ local function CreatePlayerCount()
    local screenGui = Instance.new("ScreenGui")
    screenGui.ResetOnSpawn = false
    screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-
+   
    PlayerCountText = Instance.new("TextLabel")
    PlayerCountText.Size = UDim2.new(0, 320, 0, 45)
    PlayerCountText.Position = UDim2.new(0.5, -160, 0, 15)
@@ -81,9 +80,7 @@ end
 
 local function CreateESPForCharacter(character, player)
    if not character or Highlights[character] then return end
-   if IsAtSpawn(character) then return end
-
-   task.wait(0.15)
+   if not character:FindFirstChild("HumanoidRootPart") or not character:FindFirstChild("Head") then return end
 
    local highlight = Instance.new("Highlight")
    highlight.Name = "SpectrHighlight"
@@ -128,8 +125,18 @@ local function CreateESPForCharacter(character, player)
 end
 
 local function UpdateESP()
+   -- Auto-create ESP for new players who left spawn
+   for _, plr in ipairs(Players:GetPlayers()) do
+      if plr ~= LocalPlayer and plr.Character and not Highlights[plr.Character] then
+         if not IsAtSpawn(plr.Character) then
+            CreateESPForCharacter(plr.Character, plr)
+         end
+      end
+   end
+
+   -- Update existing ESP
    for character, highlight in pairs(Highlights) do
-      if IsAtSpawn(character) then
+      if not character or not character.Parent or not character:FindFirstChild("HumanoidRootPart") then
          if highlight then highlight:Destroy() end
          if NameLabels[character] then NameLabels[character]:Destroy() end
          if Tracers[character] then Tracers[character]:Remove() end
@@ -139,8 +146,15 @@ local function UpdateESP()
          continue
       end
 
-      local player = character.Parent
-      if not player or not player:IsA("Player") then continue end
+      if IsAtSpawn(character) then
+         if highlight then highlight:Destroy() end
+         if NameLabels[character] then NameLabels[character]:Destroy() end
+         if Tracers[character] then Tracers[character]:Remove() end
+         Highlights[character] = nil
+         NameLabels[character] = nil
+         Tracers[character] = nil
+         continue
+      end
 
       local isVis = IsVisible(character)
       highlight.FillColor = isVis and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
@@ -159,6 +173,7 @@ local function UpdateESP()
          end
       end
    end
+
    UpdatePlayerCount()
 end
 
@@ -166,11 +181,6 @@ local function ToggleESP(state)
    ESPEnabled = state
    if state then
       CreatePlayerCount()
-      for _, player in ipairs(Players:GetPlayers()) do
-         if player ~= LocalPlayer and player.Character then
-            CreateESPForCharacter(player.Character, player)
-         end
-      end
       RunService:BindToRenderStep("SpectrESPUpdate", Enum.RenderPriority.Camera.Value + 5, UpdateESP)
    else
       RunService:UnbindFromRenderStep("SpectrESPUpdate")
@@ -190,7 +200,6 @@ end
 -- ================== AUTO TAPPER ==================
 local AutoTapEnabled = false
 local TapSpeed = 0.05
-
 local TapConnection
 
 local function StartAutoTapper()
@@ -198,13 +207,11 @@ local function StartAutoTapper()
    TapConnection = RunService.Heartbeat:Connect(function()
       if not AutoTapEnabled then return end
       if not UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then return end
-
+      
       VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Q, false, game)
       task.wait(TapSpeed)
       VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Q, false, game)
-
       task.wait(TapSpeed)
-
       VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.One, false, game)
       task.wait(TapSpeed)
       VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.One, false, game)
@@ -241,19 +248,29 @@ end
 
 local function GetClosestPlayer()
    local closest, shortest = nil, math.huge
+   
    for _, plr in ipairs(Players:GetPlayers()) do
-      if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild(AimPart) and not IsAtSpawn(plr.Character) then
-         local pos = plr.Character[AimPart].Position
-         local screen, onScreen = Camera:WorldToScreenPoint(pos)
-         if onScreen then
-            local dist = (Vector2.new(screen.X, screen.Y) - Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)).Magnitude
-            if dist < AimFOV and dist < shortest then
-               shortest = dist
-               closest = plr
-            end
+      if plr == LocalPlayer or not plr.Character then continue end
+      
+      local character = plr.Character
+      local aimPartInstance = character:FindFirstChild(AimPart)
+      
+      if not aimPartInstance or IsAtSpawn(character) then
+         continue
+      end
+      
+      local pos = aimPartInstance.Position
+      local screen, onScreen = Camera:WorldToScreenPoint(pos)
+      
+      if onScreen then
+         local dist = (Vector2.new(screen.X, screen.Y) - Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)).Magnitude
+         if dist < AimFOV and dist < shortest then
+            shortest = dist
+            closest = plr
          end
       end
    end
+   
    return closest
 end
 
@@ -263,6 +280,7 @@ local function StartAimbot()
    AimbotConnection = RunService.RenderStepped:Connect(function()
       UpdateFOVCircle()
       if not AimbotEnabled then return end
+      
       local target = GetClosestPlayer()
       if target and target.Character and target.Character:FindFirstChild(AimPart) then
          local targetPos = target.Character[AimPart].Position
@@ -409,16 +427,10 @@ Players.PlayerAdded:Connect(function(player)
    end)
 end)
 
-for _, player in ipairs(Players:GetPlayers()) do
-   if player ~= LocalPlayer and player.Character then
-      CreateESPForCharacter(player.Character, player)
-   end
-end
-
 UpdateFOVCircle()
 
 Rayfield:Notify({
    Title = "Spectr Loaded",
-   Content = "Adjustable Spawn Exclusion Added!\nDefault radius: 60 studs\nYou can change it in ESP tab",
+   Content = "Full Fix Applied!\nESP + Tracers + Aimbot spawn avoidance working perfectly",
    Duration = 8,
 })
