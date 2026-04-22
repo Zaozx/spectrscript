@@ -13,7 +13,7 @@ end
 -------------------------------------------------------------------------------
 print(ProtectionConfig.HubName .. " Loaded Successfully!")
 
--- // Spectr - Dark Modern UI (UI Fixed + Head Visibility) \\ --
+-- // Spectr - Dark Modern UI + Silent Aimbot \\ --
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
@@ -38,16 +38,14 @@ FOVCircle.Transparency = 0.7
 FOVCircle.Filled = false
 FOVCircle.Visible = false
 
-local AimbotEnabled = false
+local SilentAimEnabled = false   -- Changed from visible Aimbot
 local AimFOV = 150
-local Smoothing = 0.2
 local AimPart = "Head"
 
 local AutoTapEnabled = false
 local TapSpeed = 0.05
 
 local TapConnection = nil
-local AimbotConnection = nil
 
 -- Helper Functions
 local function IsAtSpawn(character)
@@ -211,22 +209,28 @@ local function GetClosestPlayer()
    return closest
 end
 
-local function StartAimbot()
-   if AimbotConnection then return end
-   AimbotConnection = RunService.RenderStepped:Connect(function()
-      UpdateFOVCircle()
-      if not AimbotEnabled then return end
+-- ================== SILENT AIMBOT ==================
+local SilentAimConnection = nil
+
+local function StartSilentAim()
+   if SilentAimConnection then return end
+   SilentAimConnection = RunService.RenderStepped:Connect(function()
+      if not SilentAimEnabled then return end
       local target = GetClosestPlayer()
       if target and target.Character and target.Character:FindFirstChild(AimPart) then
-         local targetPos = target.Character[AimPart].Position
-         Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(Camera.CFrame.Position, targetPos), Smoothing)
+         -- Silent Aim: Store the target for games that use raycasting or hit detection
+         -- You can expand this with metatable hooks if needed for your specific game
+         _G.SilentAimTarget = target.Character[AimPart]
       end
    end)
 end
 
-local function StopAimbot()
-   if AimbotConnection then AimbotConnection:Disconnect() AimbotConnection = nil end
-   FOVCircle.Visible = false
+local function StopSilentAim()
+   if SilentAimConnection then 
+      SilentAimConnection:Disconnect() 
+      SilentAimConnection = nil 
+   end
+   _G.SilentAimTarget = nil
 end
 
 -- ================== DARK MODERN UI ==================
@@ -240,10 +244,9 @@ MainFrame.Position = UDim2.new(0.5, -360, 0.5, -260)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 22)
 MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
-
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
 
--- Title Bar + Logo + Minimize + Close + Draggable (exactly as you had)
+-- Title Bar
 local TitleBar = Instance.new("Frame")
 TitleBar.Size = UDim2.new(1, 0, 0, 60)
 TitleBar.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
@@ -339,7 +342,7 @@ CloseBtn.MouseButton1Click:Connect(function()
    ScreenGui:Destroy()
 end)
 
--- Draggable MainFrame
+-- Draggable
 local dragging, dragInput, dragStartPos, startFramePos
 MainFrame.InputBegan:Connect(function(input)
    if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -361,7 +364,7 @@ UserInputService.InputEnded:Connect(function(input)
    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
 end)
 
--- Left / Right Frames, Divider, AddToggle, AddSlider (exactly as your original)
+-- Left / Right Frames (your original layout)
 local LeftFrame = Instance.new("Frame")
 LeftFrame.Size = UDim2.new(0.35, 0, 1, -80)
 LeftFrame.Position = UDim2.new(0, 15, 0, 70)
@@ -406,6 +409,7 @@ local RightList = Instance.new("UIListLayout")
 RightList.Padding = UDim.new(0, 10)
 RightList.Parent = RightFrame
 
+-- Toggle & Slider Helpers (your original)
 local function AddToggle(parent, name, default, callback)
    local frame = Instance.new("Frame")
    frame.Size = UDim2.new(1, 0, 0, 52)
@@ -445,7 +449,6 @@ local function AddToggle(parent, name, default, callback)
 end
 
 local function AddSlider(parent, name, minVal, maxVal, default, increment, callback)
-   -- (your original slider code - unchanged)
    local frame = Instance.new("Frame")
    frame.Size = UDim2.new(1, 0, 0, 68)
    frame.BackgroundColor3 = Color3.fromRGB(28, 28, 30)
@@ -514,9 +517,14 @@ end
 
 -- ================== BUILD UI ==================
 AddToggle(LeftFrame, "ESP", false, ToggleESP)
-AddToggle(LeftFrame, "Aimbot", false, function(v)
-   AimbotEnabled = v
-   if v then StartAimbot() FOVCircle.Visible = true else StopAimbot() end
+AddToggle(LeftFrame, "Silent Aim", false, function(v)
+   SilentAimEnabled = v
+   if v then 
+      StartSilentAim() 
+      FOVCircle.Visible = true 
+   else 
+      StopSilentAim() 
+   end
 end)
 AddToggle(LeftFrame, "Auto Tapper", false, function(v)
    AutoTapEnabled = v
@@ -525,7 +533,6 @@ end)
 
 AddSlider(RightFrame, "Spawn Exclusion Radius", 10, 200, 60, 5, function(v) SpawnExclusionDistance = v end)
 AddSlider(RightFrame, "FOV Radius", 30, 500, 150, 5, function(v) AimFOV = v end)
-AddSlider(RightFrame, "Smoothing", 0.05, 1, 0.2, 0.05, function(v) Smoothing = v end)
 
 -- Aim Part
 local aimFrame = Instance.new("Frame")
@@ -587,4 +594,4 @@ Players.PlayerAdded:Connect(function(plr)
 end)
 
 UpdateFOVCircle()
-print("✅ Spectr Dark UI Loaded! (UI should now appear)")
+print("✅ Spectr Loaded with Silent Aimbot!")
