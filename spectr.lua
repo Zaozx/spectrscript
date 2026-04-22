@@ -13,7 +13,7 @@ end
 -------------------------------------------------------------------------------
 print(ProtectionConfig.HubName .. " Loaded Successfully!")
 
--- // Spectr - Full Screen Aimbot + Bot Targeting \\ --
+-- // Spectr - Aimbot Only When Enemy is Green (Visible) \\ --
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
@@ -178,24 +178,21 @@ local function StopAutoTapper()
    if TapConnection then TapConnection:Disconnect() TapConnection = nil end
 end
 
--- ================== FULL SCREEN AIMBOT (No FOV Limit + Targets Bots) ==================
+-- ================== AIMBOT ONLY WHEN ENEMY IS GREEN (Visible) ==================
 local AimbotConnection = nil
 
-local function GetClosestTarget()  -- Now targets both players and bots
+local function GetClosestVisibleTarget()
    local closest, shortest = nil, math.huge
-   for _, obj in ipairs(workspace:GetDescendants()) do
-      if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and obj ~= LocalPlayer.Character then
-         local root = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Head")
-         if root and not IsAtSpawn(obj) then
-            local part = obj:FindFirstChild(AimPart) or obj:FindFirstChild("Head")
-            if part then
-               local screen, onScreen = Camera:WorldToScreenPoint(part.Position)
-               if onScreen then
-                  local dist = (Vector2.new(screen.X, screen.Y) - Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)).Magnitude
-                  if dist < shortest then
-                     shortest = dist
-                     closest = obj
-                  end
+   for character, highlight in pairs(Highlights) do
+      if highlight and highlight.FillColor == Color3.fromRGB(0, 255, 0) then  -- Only green (visible) targets
+         local part = character:FindFirstChild(AimPart) or character:FindFirstChild("Head")
+         if part and not IsAtSpawn(character) then
+            local screen, onScreen = Camera:WorldToScreenPoint(part.Position)
+            if onScreen then
+               local dist = (Vector2.new(screen.X, screen.Y) - Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)).Magnitude
+               if dist < shortest then
+                  shortest = dist
+                  closest = character
                end
             end
          end
@@ -209,10 +206,13 @@ local function StartAimbot()
    AimbotConnection = RunService.RenderStepped:Connect(function()
       if not AimbotEnabled then return end
 
-      local target = GetClosestTarget()
-      if target and target:FindFirstChild(AimPart) then
-         local targetPos = target[AimPart].Position
-         Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(Camera.CFrame.Position, targetPos), Smoothing)
+      local target = GetClosestVisibleTarget()
+      if target then
+         local part = target:FindFirstChild(AimPart) or target:FindFirstChild("Head")
+         if part then
+            local targetPos = part.Position
+            Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(Camera.CFrame.Position, targetPos), Smoothing)
+         end
       end
    end)
 end
@@ -237,7 +237,7 @@ MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
 
--- Title Bar (your original)
+-- Title Bar
 local TitleBar = Instance.new("Frame")
 TitleBar.Size = UDim2.new(1, 0, 0, 60)
 TitleBar.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
@@ -355,7 +355,7 @@ UserInputService.InputEnded:Connect(function(input)
    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
 end)
 
--- Left / Right Frames (your original)
+-- Left / Right Frames
 local LeftFrame = Instance.new("Frame")
 LeftFrame.Size = UDim2.new(0.35, 0, 1, -80)
 LeftFrame.Position = UDim2.new(0, 15, 0, 70)
@@ -400,7 +400,7 @@ local RightList = Instance.new("UIListLayout")
 RightList.Padding = UDim.new(0, 10)
 RightList.Parent = RightFrame
 
--- Toggle & Slider Helpers (your original)
+-- Toggle & Slider Helpers
 local function AddToggle(parent, name, default, callback)
    local frame = Instance.new("Frame")
    frame.Size = UDim2.new(1, 0, 0, 52)
@@ -508,7 +508,7 @@ end
 
 -- ================== BUILD UI ==================
 AddToggle(LeftFrame, "ESP", false, ToggleESP)
-AddToggle(LeftFrame, "Aimbot (Full Screen)", false, function(v)
+AddToggle(LeftFrame, "Aimbot (Only Green)", false, function(v)
    AimbotEnabled = v
    if v then StartAimbot() else StopAimbot() end
 end)
@@ -579,4 +579,4 @@ Players.PlayerAdded:Connect(function(plr)
    end)
 end)
 
-print("✅ Spectr Loaded - Aimbot now targets entire screen + bots!")
+print("✅ Spectr Loaded - Aimbot now only works when enemy is green!")
