@@ -13,7 +13,7 @@ end
 -------------------------------------------------------------------------------
 print(ProtectionConfig.HubName .. " Loaded Successfully!")
 
--- // Spectr - Aimbot Only When Enemy is Green (Visible) \\ --
+-- // Spectr - Aimbot ONLY when enemy is GREEN \\ --
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
@@ -178,13 +178,14 @@ local function StopAutoTapper()
    if TapConnection then TapConnection:Disconnect() TapConnection = nil end
 end
 
--- ================== AIMBOT ONLY WHEN ENEMY IS GREEN (Visible) ==================
+-- ================== AIMBOT - ONLY WHEN GREEN ==================
 local AimbotConnection = nil
 
-local function GetClosestVisibleTarget()
+local function GetClosestGreenTarget()
    local closest, shortest = nil, math.huge
+
    for character, highlight in pairs(Highlights) do
-      if highlight and highlight.FillColor == Color3.fromRGB(0, 255, 0) then  -- Only green (visible) targets
+      if highlight and highlight.FillColor == Color3.fromRGB(0, 255, 0) then  -- STRICTLY only green
          local part = character:FindFirstChild(AimPart) or character:FindFirstChild("Head")
          if part and not IsAtSpawn(character) then
             local screen, onScreen = Camera:WorldToScreenPoint(part.Position)
@@ -206,7 +207,7 @@ local function StartAimbot()
    AimbotConnection = RunService.RenderStepped:Connect(function()
       if not AimbotEnabled then return end
 
-      local target = GetClosestVisibleTarget()
+      local target = GetClosestGreenTarget()
       if target then
          local part = target:FindFirstChild(AimPart) or target:FindFirstChild("Head")
          if part then
@@ -237,7 +238,7 @@ MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
 
--- Title Bar
+-- Title Bar (kept same)
 local TitleBar = Instance.new("Frame")
 TitleBar.Size = UDim2.new(1, 0, 0, 60)
 TitleBar.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
@@ -355,7 +356,7 @@ UserInputService.InputEnded:Connect(function(input)
    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
 end)
 
--- Left / Right Frames
+-- Left / Right Frames + Toggle & Slider (unchanged from your last version)
 local LeftFrame = Instance.new("Frame")
 LeftFrame.Size = UDim2.new(0.35, 0, 1, -80)
 LeftFrame.Position = UDim2.new(0, 15, 0, 70)
@@ -400,7 +401,6 @@ local RightList = Instance.new("UIListLayout")
 RightList.Padding = UDim.new(0, 10)
 RightList.Parent = RightFrame
 
--- Toggle & Slider Helpers
 local function AddToggle(parent, name, default, callback)
    local frame = Instance.new("Frame")
    frame.Size = UDim2.new(1, 0, 0, 52)
@@ -579,4 +579,4 @@ Players.PlayerAdded:Connect(function(plr)
    end)
 end)
 
-print("✅ Spectr Loaded - Aimbot now only works when enemy is green!")
+print("✅ Spectr Loaded - Aimbot now ONLY targets GREEN enemies!")
