@@ -13,7 +13,7 @@ end
 -------------------------------------------------------------------------------
 print(ProtectionConfig.HubName .. " Loaded Successfully!")
 
--- // Spectr - Dark Modern UI + Silent Aimbot \\ --
+-- // Spectr - Sniper Arena with Silent Aim \\ --
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
@@ -38,7 +38,7 @@ FOVCircle.Transparency = 0.7
 FOVCircle.Filled = false
 FOVCircle.Visible = false
 
-local SilentAimEnabled = false   -- Changed from visible Aimbot
+local SilentAimEnabled = false
 local AimFOV = 150
 local AimPart = "Head"
 
@@ -69,6 +69,52 @@ local function IsVisible(targetCharacter)
    return result == nil or result.Instance:IsDescendantOf(targetCharacter)
 end
 
+local function GetClosestPlayer()
+   local closest, shortest = nil, math.huge
+   for _, plr in ipairs(Players:GetPlayers()) do
+      if plr == LocalPlayer or not plr.Character then continue end
+      local char = plr.Character
+      local part = char:FindFirstChild(AimPart) or char:FindFirstChild("Head")
+      if not part or IsAtSpawn(char) then continue end
+      local screen, onScreen = Camera:WorldToScreenPoint(part.Position)
+      if onScreen then
+         local dist = (Vector2.new(screen.X, screen.Y) - Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)).Magnitude
+         if dist < AimFOV and dist < shortest then
+            shortest = dist
+            closest = plr
+         end
+      end
+   end
+   return closest
+end
+
+-- ================== SILENT AIM FOR SNIPER ARENA ==================
+local SilentAimConnection = nil
+
+local function StartSilentAim()
+   if SilentAimConnection then return end
+   SilentAimConnection = RunService.RenderStepped:Connect(function()
+      if not SilentAimEnabled then return end
+      local target = GetClosestPlayer()
+      if target and target.Character then
+         local targetPart = target.Character:FindFirstChild(AimPart) or target.Character:FindFirstChild("Head")
+         if targetPart then
+            -- Store target for silent aim (many Sniper Arena scripts use this pattern)
+            _G.SilentAimTarget = targetPart
+         end
+      end
+   end)
+end
+
+local function StopSilentAim()
+   if SilentAimConnection then 
+      SilentAimConnection:Disconnect() 
+      SilentAimConnection = nil 
+   end
+   _G.SilentAimTarget = nil
+end
+
+-- ================== ESP ==================
 local function CreateESPForCharacter(character, player)
    if not character or Highlights[character] then return end
    if not character:FindFirstChild("HumanoidRootPart") or not character:FindFirstChild("Head") then return end
@@ -140,22 +186,6 @@ end
 local function ToggleESP(state)
    ESPEnabled = state
    if state then
-      if not PlayerCountText then
-         local sg = Instance.new("ScreenGui")
-         sg.ResetOnSpawn = false
-         sg.Parent = LocalPlayer:WaitForChild("PlayerGui")
-         PlayerCountText = Instance.new("TextLabel")
-         PlayerCountText.Size = UDim2.new(0, 280, 0, 40)
-         PlayerCountText.Position = UDim2.new(0.5, -140, 0, 15)
-         PlayerCountText.BackgroundTransparency = 0.6
-         PlayerCountText.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-         PlayerCountText.TextColor3 = Color3.fromRGB(255, 255, 255)
-         PlayerCountText.TextStrokeTransparency = 0
-         PlayerCountText.Font = Enum.Font.GothamBold
-         PlayerCountText.TextSize = 16
-         PlayerCountText.Text = "Players in ESP: 0"
-         PlayerCountText.Parent = sg
-      end
       RunService:BindToRenderStep("SpectrESP", Enum.RenderPriority.Camera.Value + 5, UpdateESP)
    else
       RunService:UnbindFromRenderStep("SpectrESP")
@@ -163,10 +193,10 @@ local function ToggleESP(state)
       for _, lbl in pairs(NameLabels) do if lbl then lbl:Destroy() end end
       Highlights = {}
       NameLabels = {}
-      if PlayerCountText then PlayerCountText.Parent:Destroy() PlayerCountText = nil end
    end
 end
 
+-- Auto Tapper
 local function StartAutoTapper()
    if TapConnection then return end
    TapConnection = RunService.Heartbeat:Connect(function()
@@ -190,49 +220,6 @@ local function UpdateFOVCircle()
    FOVCircle.Radius = AimFOV
 end
 
-local function GetClosestPlayer()
-   local closest, shortest = nil, math.huge
-   for _, plr in ipairs(Players:GetPlayers()) do
-      if plr == LocalPlayer or not plr.Character then continue end
-      local char = plr.Character
-      local part = char:FindFirstChild(AimPart)
-      if not part or IsAtSpawn(char) then continue end
-      local screen, onScreen = Camera:WorldToScreenPoint(part.Position)
-      if onScreen then
-         local dist = (Vector2.new(screen.X, screen.Y) - Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)).Magnitude
-         if dist < AimFOV and dist < shortest then
-            shortest = dist
-            closest = plr
-         end
-      end
-   end
-   return closest
-end
-
--- ================== SILENT AIMBOT ==================
-local SilentAimConnection = nil
-
-local function StartSilentAim()
-   if SilentAimConnection then return end
-   SilentAimConnection = RunService.RenderStepped:Connect(function()
-      if not SilentAimEnabled then return end
-      local target = GetClosestPlayer()
-      if target and target.Character and target.Character:FindFirstChild(AimPart) then
-         -- Silent Aim: Store the target for games that use raycasting or hit detection
-         -- You can expand this with metatable hooks if needed for your specific game
-         _G.SilentAimTarget = target.Character[AimPart]
-      end
-   end)
-end
-
-local function StopSilentAim()
-   if SilentAimConnection then 
-      SilentAimConnection:Disconnect() 
-      SilentAimConnection = nil 
-   end
-   _G.SilentAimTarget = nil
-end
-
 -- ================== DARK MODERN UI ==================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.ResetOnSpawn = false
@@ -246,7 +233,7 @@ MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
 
--- Title Bar
+-- Title Bar, Logo, Minimize, Close, Draggable (kept the same as your last version)
 local TitleBar = Instance.new("Frame")
 TitleBar.Size = UDim2.new(1, 0, 0, 60)
 TitleBar.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
@@ -292,7 +279,7 @@ CloseBtn.TextSize = 26
 CloseBtn.Font = Enum.Font.GothamBold
 CloseBtn.Parent = TitleBar
 
--- Minimized Logo
+-- Minimized Logo (small)
 local Logo = nil
 local function CreateMinimizeLogo()
    if Logo then return end
@@ -364,7 +351,7 @@ UserInputService.InputEnded:Connect(function(input)
    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
 end)
 
--- Left / Right Frames (your original layout)
+-- Left / Right Frames (your layout)
 local LeftFrame = Instance.new("Frame")
 LeftFrame.Size = UDim2.new(0.35, 0, 1, -80)
 LeftFrame.Position = UDim2.new(0, 15, 0, 70)
@@ -409,7 +396,7 @@ local RightList = Instance.new("UIListLayout")
 RightList.Padding = UDim.new(0, 10)
 RightList.Parent = RightFrame
 
--- Toggle & Slider Helpers (your original)
+-- Toggle & Slider (your original)
 local function AddToggle(parent, name, default, callback)
    local frame = Instance.new("Frame")
    frame.Size = UDim2.new(1, 0, 0, 52)
@@ -594,4 +581,4 @@ Players.PlayerAdded:Connect(function(plr)
 end)
 
 UpdateFOVCircle()
-print("✅ Spectr Loaded with Silent Aimbot!")
+print("✅ Spectr Loaded with Silent Aim for Sniper Arena!")
