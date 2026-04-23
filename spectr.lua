@@ -1,19 +1,4 @@
--- ⚠️ IMPORTANT: Put this code at the VERY TOP of your Main Script (before obfuscating) ⚠️
-local ProtectionConfig = {
-    SecretKey = "Spectr",
-    HubName = "Spectr"
-}
-if not _G[ProtectionConfig.SecretKey] then
-    local player = game:GetService("Players").LocalPlayer
-    if player then
-        player:Kick("\n🛡️ Unauthorized Execution 🛡️\n\nPlease use the official Key System to run " .. ProtectionConfig.HubName)
-    end
-    return
-end
--------------------------------------------------------------------------------
-print(ProtectionConfig.HubName .. " Loaded Successfully!")
 
--- // Spectr - Aimbot ONLY when enemy is GREEN \\ --
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
@@ -60,6 +45,12 @@ local function IsVisible(targetCharacter)
 
    local result = workspace:Raycast(Camera.CFrame.Position, direction * (distance + 10), raycastParams)
    return result == nil or result.Instance:IsDescendantOf(targetCharacter)
+end
+
+local function IsAlive(character)
+    if not character then return false end
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    return humanoid ~= nil and humanoid.Health > 0
 end
 
 local function CreateESPForCharacter(character, player)
@@ -125,6 +116,15 @@ local function UpdateESP()
          continue
       end
 
+        -- Add this block right after the IsAtSpawn check
+    if not IsAlive(character) then
+        if highlight then highlight:Destroy() end
+        if NameLabels[character] then NameLabels[character]:Destroy() end
+        Highlights[character] = nil
+        NameLabels[character] = nil
+        continue
+    end
+
       local isVis = IsVisible(character)
       highlight.FillColor = isVis and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
    end
@@ -182,24 +182,24 @@ end
 local AimbotConnection = nil
 
 local function GetClosestGreenTarget()
-   local closest, shortest = nil, math.huge
+    local closest, shortest = nil, math.huge
 
-   for character, highlight in pairs(Highlights) do
-      if highlight and highlight.FillColor == Color3.fromRGB(0, 255, 0) then  -- STRICTLY only green
-         local part = character:FindFirstChild(AimPart) or character:FindFirstChild("Head")
-         if part and not IsAtSpawn(character) then
-            local screen, onScreen = Camera:WorldToScreenPoint(part.Position)
-            if onScreen then
-               local dist = (Vector2.new(screen.X, screen.Y) - Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)).Magnitude
-               if dist < shortest then
-                  shortest = dist
-                  closest = character
-               end
+    for character, highlight in pairs(Highlights) do
+        if highlight and highlight.FillColor == Color3.fromRGB(0, 255, 0) and IsAlive(character) then
+            local part = character:FindFirstChild(AimPart) or character:FindFirstChild("Head")
+            if part and not IsAtSpawn(character) then
+                local screen, onScreen = Camera:WorldToScreenPoint(part.Position)
+                if onScreen then
+                    local dist = (Vector2.new(screen.X, screen.Y) - Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)).Magnitude
+                    if dist < shortest then
+                        shortest = dist
+                        closest = character
+                    end
+                end
             end
-         end
-      end
-   end
-   return closest
+        end
+    end
+    return closest
 end
 
 local function StartAimbot()
