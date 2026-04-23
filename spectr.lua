@@ -59,40 +59,50 @@ local function IsAlive(character)
 end
 
 local function CreateESPForCharacter(character, player)
-   if not character or Highlights[character] then return end
-   if not character:FindFirstChild("HumanoidRootPart") or not character:FindFirstChild("Head") then return end
+    if not character or Highlights[character] then return end
+    if not character:FindFirstChild("HumanoidRootPart") or not character:FindFirstChild("Head") then return end
 
-   local highlight = Instance.new("Highlight")
-   highlight.FillColor = Color3.fromRGB(255, 0, 0)
-   highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-   highlight.FillTransparency = 0.4
-   highlight.OutlineTransparency = 0
-   highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-   highlight.Adornee = character
-   highlight.Parent = character
-   Highlights[character] = highlight
+    local highlight = Instance.new("Highlight")
+    highlight.FillColor = Color3.fromRGB(255, 0, 0)
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.FillTransparency = 0.4
+    highlight.OutlineTransparency = 0
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.Adornee = character
+    highlight.Parent = character
+    Highlights[character] = highlight
 
-   local head = character:FindFirstChild("Head")
-   if head then
-      local billboard = Instance.new("BillboardGui")
-      billboard.Adornee = head
-      billboard.Size = UDim2.new(0, 200, 0, 50)
-      billboard.StudsOffset = Vector3.new(0, 3, 0)
-      billboard.AlwaysOnTop = true
-      billboard.Parent = character
+    -- ✅ INSTANT death detection — fires the moment character is reparented
+    character.AncestryChanged:Connect(function()
+        if character.Parent and character.Parent.Name == "Dead" then
+            if Highlights[character] then Highlights[character]:Destroy() end
+            if NameLabels[character] then NameLabels[character]:Destroy() end
+            Highlights[character] = nil
+            NameLabels[character] = nil
+        end
+    end)
 
-      local textLabel = Instance.new("TextLabel")
-      textLabel.Size = UDim2.new(1, 0, 1, 0)
-      textLabel.BackgroundTransparency = 1
-      textLabel.Text = player.Name
-      textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-      textLabel.TextStrokeTransparency = 0
-      textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-      textLabel.Font = Enum.Font.GothamBold
-      textLabel.TextSize = 16
-      textLabel.Parent = billboard
-      NameLabels[character] = billboard
-   end
+    local head = character:FindFirstChild("Head")
+    if head then
+        local billboard = Instance.new("BillboardGui")
+        billboard.Adornee = head
+        billboard.Size = UDim2.new(0, 200, 0, 50)
+        billboard.StudsOffset = Vector3.new(0, 3, 0)
+        billboard.AlwaysOnTop = true
+        billboard.Parent = character
+
+        local textLabel = Instance.new("TextLabel")
+        textLabel.Size = UDim2.new(1, 0, 1, 0)
+        textLabel.BackgroundTransparency = 1
+        textLabel.Text = player.Name
+        textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        textLabel.TextStrokeTransparency = 0
+        textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        textLabel.Font = Enum.Font.GothamBold
+        textLabel.TextSize = 16
+        textLabel.Parent = billboard
+        NameLabels[character] = billboard
+    end
 end
 
 local function UpdateESP()
