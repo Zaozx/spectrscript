@@ -16,6 +16,8 @@ local ESPEnabled = false
 local PlayerCountText = nil
 
 local AimbotEnabled = false
+local UseFOV = true          -- New toggle
+local AimFOV = 150
 local Smoothing = 0.2
 local AimPart = "Head"
 
@@ -25,10 +27,23 @@ local TapSpeed = 0.05
 local TapConnection = nil
 local AimbotConnection = nil
 
+local FOVCircle = Drawing.new("Circle")
+FOVCircle.Thickness = 2
+FOVCircle.NumSides = 64
+FOVCircle.Color = Color3.fromRGB(255, 255, 255)
+FOVCircle.Transparency = 0.7
+FOVCircle.Filled = false
+FOVCircle.Visible = false
+
 -- Helper Functions
 local function IsAtSpawn(character)
    if not character or not character:FindFirstChild("HumanoidRootPart") then return false end
    return (character.HumanoidRootPart.Position - SpawnPosition).Magnitude < SpawnExclusionDistance
+end
+
+local function IsAlive(character)
+   local humanoid = character:FindFirstChild("Humanoid")
+   return humanoid and humanoid.Health > 0
 end
 
 local function IsVisible(targetCharacter)
@@ -47,62 +62,41 @@ local function IsVisible(targetCharacter)
    return result == nil or result.Instance:IsDescendantOf(targetCharacter)
 end
 
-local function IsAlive(character)
-    if not character then return false end
-    
-    if character.Parent and character.Parent.Name == "Dead" then return false end
-    
-    local humanoid = character:FindFirstChildOfClass("Humanoid")
-    if not humanoid or humanoid.Health <= 0 then return false end
-    
-    return true
-end
-
 local function CreateESPForCharacter(character, player)
-    if not character or Highlights[character] then return end
-    if not character:FindFirstChild("HumanoidRootPart") or not character:FindFirstChild("Head") then return end
+   if not character or Highlights[character] then return end
+   if not character:FindFirstChild("HumanoidRootPart") or not character:FindFirstChild("Head") then return end
 
-    local highlight = Instance.new("Highlight")
-    highlight.FillColor = Color3.fromRGB(255, 0, 0)
-    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-    highlight.FillTransparency = 0.4
-    highlight.OutlineTransparency = 0
-    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    highlight.Adornee = character
-    highlight.Parent = character
-    Highlights[character] = highlight
+   local highlight = Instance.new("Highlight")
+   highlight.FillColor = Color3.fromRGB(255, 0, 0)
+   highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+   highlight.FillTransparency = 0.4
+   highlight.OutlineTransparency = 0
+   highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+   highlight.Adornee = character
+   highlight.Parent = character
+   Highlights[character] = highlight
 
-    -- ✅ INSTANT death detection — fires the moment character is reparented
-    character.AncestryChanged:Connect(function()
-        if character.Parent and character.Parent.Name == "Dead" then
-            if Highlights[character] then Highlights[character]:Destroy() end
-            if NameLabels[character] then NameLabels[character]:Destroy() end
-            Highlights[character] = nil
-            NameLabels[character] = nil
-        end
-    end)
+   local head = character:FindFirstChild("Head")
+   if head then
+      local billboard = Instance.new("BillboardGui")
+      billboard.Adornee = head
+      billboard.Size = UDim2.new(0, 200, 0, 50)
+      billboard.StudsOffset = Vector3.new(0, 3, 0)
+      billboard.AlwaysOnTop = true
+      billboard.Parent = character
 
-    local head = character:FindFirstChild("Head")
-    if head then
-        local billboard = Instance.new("BillboardGui")
-        billboard.Adornee = head
-        billboard.Size = UDim2.new(0, 200, 0, 50)
-        billboard.StudsOffset = Vector3.new(0, 3, 0)
-        billboard.AlwaysOnTop = true
-        billboard.Parent = character
-
-        local textLabel = Instance.new("TextLabel")
-        textLabel.Size = UDim2.new(1, 0, 1, 0)
-        textLabel.BackgroundTransparency = 1
-        textLabel.Text = player.Name
-        textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-        textLabel.TextStrokeTransparency = 0
-        textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-        textLabel.Font = Enum.Font.GothamBold
-        textLabel.TextSize = 16
-        textLabel.Parent = billboard
-        NameLabels[character] = billboard
-    end
+      local textLabel = Instance.new("TextLabel")
+      textLabel.Size = UDim2.new(1, 0, 1, 0)
+      textLabel.BackgroundTransparency = 1
+      textLabel.Text = player.Name
+      textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+      textLabel.TextStrokeTransparency = 0
+      textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+      textLabel.Font = Enum.Font.GothamBold
+      textLabel.TextSize = 16
+      textLabel.Parent = billboard
+      NameLabels[character] = billboard
+   end
 end
 
 local function UpdateESP()
@@ -123,22 +117,13 @@ local function UpdateESP()
          continue
       end
 
-      if IsAtSpawn(character) then
+      if IsAtSpawn(character) or not IsAlive(character) then
          if highlight then highlight:Destroy() end
          if NameLabels[character] then NameLabels[character]:Destroy() end
          Highlights[character] = nil
          NameLabels[character] = nil
          continue
       end
-
-        -- Add this block right after the IsAtSpawn check
-    if not IsAlive(character) then
-        if highlight then highlight:Destroy() end
-        if NameLabels[character] then NameLabels[character]:Destroy() end
-        Highlights[character] = nil
-        NameLabels[character] = nil
-        continue
-    end
 
       local isVis = IsVisible(character)
       highlight.FillColor = isVis and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
@@ -193,36 +178,49 @@ local function StopAutoTapper()
    if TapConnection then TapConnection:Disconnect() TapConnection = nil end
 end
 
--- ================== AIMBOT - ONLY WHEN GREEN ==================
+local function UpdateFOVCircle()
+   FOVCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+   FOVCircle.Radius = AimFOV
+   FOVCircle.Visible = UseFOV and AimbotEnabled
+end
+
+-- ================== AIMBOT - GREEN + ALIVE + OPTIONAL FOV ==================
 local AimbotConnection = nil
 
-local function GetClosestGreenTarget()
-    local closest, shortest = nil, math.huge
+local function GetClosestGreenAliveTarget()
+   local closest, shortest = nil, math.huge
 
-    for character, highlight in pairs(Highlights) do
-        if highlight and highlight.FillColor == Color3.fromRGB(0, 255, 0) and IsAlive(character) then
+   for character, highlight in pairs(Highlights) do
+      if highlight and highlight.FillColor == Color3.fromRGB(0, 255, 0) then
+         if IsAlive(character) and not IsAtSpawn(character) then
             local part = character:FindFirstChild(AimPart) or character:FindFirstChild("Head")
-            if part and not IsAtSpawn(character) then
-                local screen, onScreen = Camera:WorldToScreenPoint(part.Position)
-                if onScreen then
-                    local dist = (Vector2.new(screen.X, screen.Y) - Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)).Magnitude
-                    if dist < shortest then
+            if part then
+               local screen, onScreen = Camera:WorldToScreenPoint(part.Position)
+               if onScreen then
+                  local dist = (Vector2.new(screen.X, screen.Y) - Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)).Magnitude
+                  
+                  -- If FOV is enabled, only accept targets inside the circle
+                  if not UseFOV or dist <= AimFOV then
+                     if dist < shortest then
                         shortest = dist
                         closest = character
-                    end
-                end
+                     end
+                  end
+               end
             end
-        end
-    end
-    return closest
+         end
+      end
+   end
+   return closest
 end
 
 local function StartAimbot()
    if AimbotConnection then return end
    AimbotConnection = RunService.RenderStepped:Connect(function()
       if not AimbotEnabled then return end
+      UpdateFOVCircle()
 
-      local target = GetClosestGreenTarget()
+      local target = GetClosestGreenAliveTarget()
       if target then
          local part = target:FindFirstChild(AimPart) or target:FindFirstChild("Head")
          if part then
@@ -238,6 +236,7 @@ local function StopAimbot()
       AimbotConnection:Disconnect() 
       AimbotConnection = nil 
    end
+   FOVCircle.Visible = false
 end
 
 -- ================== DARK MODERN UI ==================
@@ -253,7 +252,7 @@ MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
 
--- Title Bar (kept same)
+-- Title Bar (unchanged)
 local TitleBar = Instance.new("Frame")
 TitleBar.Size = UDim2.new(1, 0, 0, 60)
 TitleBar.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
@@ -349,7 +348,7 @@ CloseBtn.MouseButton1Click:Connect(function()
    ScreenGui:Destroy()
 end)
 
--- Draggable
+-- Draggable (unchanged)
 local dragging, dragInput, dragStartPos, startFramePos
 MainFrame.InputBegan:Connect(function(input)
    if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -371,7 +370,7 @@ UserInputService.InputEnded:Connect(function(input)
    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
 end)
 
--- Left / Right Frames + Toggle & Slider (unchanged from your last version)
+-- Left / Right Frames + UI Helpers (unchanged)
 local LeftFrame = Instance.new("Frame")
 LeftFrame.Size = UDim2.new(0.35, 0, 1, -80)
 LeftFrame.Position = UDim2.new(0, 15, 0, 70)
@@ -523,9 +522,13 @@ end
 
 -- ================== BUILD UI ==================
 AddToggle(LeftFrame, "ESP", false, ToggleESP)
-AddToggle(LeftFrame, "Aimbot (Only Green)", false, function(v)
+AddToggle(LeftFrame, "Aimbot (Only Green + Alive)", false, function(v)
    AimbotEnabled = v
    if v then StartAimbot() else StopAimbot() end
+end)
+AddToggle(LeftFrame, "Use FOV Circle", true, function(v)   -- NEW TOGGLE
+   UseFOV = v
+   UpdateFOVCircle()
 end)
 AddToggle(LeftFrame, "Auto Tapper", false, function(v)
    AutoTapEnabled = v
@@ -533,6 +536,10 @@ AddToggle(LeftFrame, "Auto Tapper", false, function(v)
 end)
 
 AddSlider(RightFrame, "Spawn Exclusion Radius", 10, 200, 60, 5, function(v) SpawnExclusionDistance = v end)
+AddSlider(RightFrame, "FOV Radius", 30, 500, 150, 5, function(v) 
+   AimFOV = v 
+   UpdateFOVCircle() 
+end)
 AddSlider(RightFrame, "Smoothing", 0.05, 1, 0.2, 0.05, function(v) Smoothing = v end)
 
 -- Aim Part
@@ -594,4 +601,5 @@ Players.PlayerAdded:Connect(function(plr)
    end)
 end)
 
-print("✅ Spectr Loaded - Aimbot now ONLY targets GREEN enemies!")
+UpdateFOVCircle()
+print("✅ Spectr Loaded - FOV Circle toggle added!")
