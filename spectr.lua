@@ -49,8 +49,13 @@ end
 
 local function IsAlive(character)
     if not character then return false end
+    
+    if character.Parent and character.Parent.Name == "Dead" then return false end
+    
     local humanoid = character:FindFirstChildOfClass("Humanoid")
-    return humanoid ~= nil and humanoid.Health > 0
+    if not humanoid or humanoid.Health <= 0 then return false end
+    
+    return true
 end
 
 local function CreateESPForCharacter(character, player)
